@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
+import NotificacionesBell from '@/components/NotificacionesBell';
 
 export default function AppShell({ links, titulo, children, requiereRRHH = false }) {
   const pathname = usePathname();
@@ -59,9 +60,12 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
       <aside className="hidden md:flex md:w-60 md:flex-col bg-white border-r border-slate-200 md:fixed md:inset-y-0">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-200">
-          <img src="/qdc-logo.png" alt="QDC" className="h-8 w-auto" />
-          <span className="text-sm font-bold text-[#153A5B]">Portal QDC</span>
+        <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <img src="/qdc-logo.png" alt="QDC" className="h-8 w-auto" />
+            <span className="text-sm font-bold text-[#153A5B]">Portal QDC</span>
+          </div>
+          <NotificacionesBell trabajadorId={perfil.id} />
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {links.map((l) => (
@@ -100,8 +104,11 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
             <img src="/qdc-logo.png" alt="QDC" className="h-7 w-auto" />
             <span className="text-xs font-bold text-[#153A5B]">{titulo}</span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
-            {iniciales}
+          <div className="flex items-center gap-2">
+            <NotificacionesBell trabajadorId={perfil.id} />
+            <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
+              {iniciales}
+            </div>
           </div>
         </div>
 
