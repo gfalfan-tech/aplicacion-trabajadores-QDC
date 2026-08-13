@@ -15,6 +15,8 @@ const vacio = {
   jefe_directo_id: '',
   fecha_ingreso: '',
   fecha_nacimiento: '',
+  tipo_contrato: 'INDEFINIDO',
+  registra_asistencia: 'SI',
   dias_pendientes_base: 0,
   dias_progresivos_reconocidos: 0,
   roles: ['trabajador'],
@@ -90,6 +92,8 @@ export default function TrabajadoresRRHH() {
       jefe_directo_id: t.jefe_directo_id || '',
       fecha_ingreso: t.fecha_ingreso || '',
       fecha_nacimiento: t.fecha_nacimiento || '',
+      tipo_contrato: t.tipo_contrato || 'INDEFINIDO',
+      registra_asistencia: t.registra_asistencia || 'SI',
       estado: t.estado || 'activo',
     });
   }
@@ -113,6 +117,8 @@ export default function TrabajadoresRRHH() {
         jefe_directo_id: editForm.jefe_directo_id || null,
         fecha_ingreso: editForm.fecha_ingreso,
         fecha_nacimiento: editForm.fecha_nacimiento || null,
+        tipo_contrato: editForm.tipo_contrato || null,
+        registra_asistencia: editForm.registra_asistencia || null,
         estado: editForm.estado,
       })
       .eq('id', editandoId);
@@ -228,6 +234,32 @@ export default function TrabajadoresRRHH() {
                 onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
               />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-500">Tipo de contrato</label>
+              <select
+                value={form.tipo_contrato}
+                onChange={(e) => setForm({ ...form, tipo_contrato: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="INDEFINIDO">Indefinido</option>
+                <option value="PLAZO_FIJO">Plazo fijo</option>
+                <option value="POR_OBRA">Por obra o faena</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Registra asistencia</label>
+              <select
+                value={form.registra_asistencia}
+                onChange={(e) => setForm({ ...form, registra_asistencia: e.target.value })}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="SI">Sí</option>
+                <option value="NO">No</option>
+                <option value="ART22">Art. 22 (exento)</option>
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -400,6 +432,32 @@ export default function TrabajadoresRRHH() {
                       onChange={(e) => setEditForm({ ...editForm, fecha_nacimiento: e.target.value })}
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500">Tipo de contrato</label>
+                    <select
+                      value={editForm.tipo_contrato}
+                      onChange={(e) => setEditForm({ ...editForm, tipo_contrato: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="INDEFINIDO">Indefinido</option>
+                      <option value="PLAZO_FIJO">Plazo fijo</option>
+                      <option value="POR_OBRA">Por obra o faena</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500">Registra asistencia</label>
+                    <select
+                      value={editForm.registra_asistencia}
+                      onChange={(e) => setEditForm({ ...editForm, registra_asistencia: e.target.value })}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="SI">Sí</option>
+                      <option value="NO">No</option>
+                      <option value="ART22">Art. 22 (exento)</option>
+                    </select>
                   </div>
                 </div>
                 <select

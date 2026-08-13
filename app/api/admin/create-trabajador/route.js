@@ -37,6 +37,8 @@ export async function POST(req) {
     jefe_directo_id: body.jefe_directo_id || null,
     fecha_ingreso: body.fecha_ingreso,
     fecha_nacimiento: body.fecha_nacimiento || null,
+    tipo_contrato: body.tipo_contrato || null,
+    registra_asistencia: body.registra_asistencia || null,
   });
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 400 });
