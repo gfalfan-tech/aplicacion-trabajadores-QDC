@@ -27,6 +27,7 @@ export default function TrabajadoresRRHH() {
   const esAdministrador = roles.includes('administrador');
 
   const [lista, setLista] = useState([]);
+  const [rolesPorTrabajador, setRolesPorTrabajador] = useState({});
   const [areas, setAreas] = useState([]);
   const [form, setForm] = useState(vacio);
   const [enviando, setEnviando] = useState(false);
@@ -47,6 +48,12 @@ export default function TrabajadoresRRHH() {
     setLista(data || []);
     const { data: a } = await supabase.from('areas').select('*').order('nombre');
     setAreas(a || []);
+    const { data: rolesData } = await supabase.from('trabajador_roles').select('trabajador_id, rol');
+    const mapa = {};
+    (rolesData || []).forEach((r) => {
+      mapa[r.trabajador_id] = [...(mapa[r.trabajador_id] || []), r.rol];
+    });
+    setRolesPorTrabajador(mapa);
   }
 
   useEffect(() => {
@@ -55,6 +62,13 @@ export default function TrabajadoresRRHH() {
 
   function toggleRol(rol) {
     setForm((f) => ({
+      ...f,
+      roles: f.roles.includes(rol) ? f.roles.filter((r) => r !== rol) : [...f.roles, rol],
+    }));
+  }
+
+  function toggleRolEdit(rol) {
+    setEditForm((f) => ({
       ...f,
       roles: f.roles.includes(rol) ? f.roles.filter((r) => r !== rol) : [...f.roles, rol],
     }));
@@ -95,6 +109,7 @@ export default function TrabajadoresRRHH() {
       tipo_contrato: t.tipo_contrato || 'INDEFINIDO',
       registra_asistencia: t.registra_asistencia || 'SI',
       estado: t.estado || 'activo',
+      roles: rolesPorTrabajador[t.id] || [],
     });
   }
 
@@ -122,11 +137,33 @@ export default function TrabajadoresRRHH() {
         estado: editForm.estado,
       })
       .eq('id', editandoId);
-    setGuardandoEdicion(false);
     if (error) {
+      setGuardandoEdicion(false);
       setMensaje('Error al guardar: ' + error.message);
       return;
     }
+
+    const { error: delError } = await supabase
+      .from('trabajador_roles')
+      .delete()
+      .eq('trabajador_id', editandoId);
+    if (delError) {
+      setGuardandoEdicion(false);
+      setMensaje('Error al actualizar roles: ' + delError.message);
+      return;
+    }
+    if (editForm.roles.length) {
+      const { error: rolError } = await supabase
+        .from('trabajador_roles')
+        .insert(editForm.roles.map((r) => ({ trabajador_id: editandoId, rol: r })));
+      if (rolError) {
+        setGuardandoEdicion(false);
+        setMensaje('Error al actualizar roles: ' + rolError.message);
+        return;
+      }
+    }
+
+    setGuardandoEdicion(false);
     cerrarEdicion();
     cargar();
   }
@@ -468,6 +505,21 @@ export default function TrabajadoresRRHH() {
                   <option value="activo">Activo</option>
                   <option value="inactivo">Inactivo</option>
                 </select>
+                <div>
+                  <label className="text-xs text-slate-500 block mb-1">Nivel de acceso (roles)</label>
+                  <div className="flex gap-3 flex-wrap">
+                    {['trabajador', 'jefatura', 'rrhh', 'administrador'].map((r) => (
+                      <label key={r} className="flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={editForm.roles.includes(r)}
+                          onChange={() => toggleRolEdit(r)}
+                        />
+                        {r}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <button
                   disabled={guardandoEdicion}
                   className="w-full bg-[#0F5C8C] text-white font-bold rounded-lg py-2 text-sm"
