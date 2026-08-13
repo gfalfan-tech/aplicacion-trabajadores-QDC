@@ -7,6 +7,29 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 
+const MESES_CORTOS = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
+
+// Formatea una fecha "YYYY-MM-DD" tal cual, sin pasar por Date/UTC, para
+// evitar que el navegador la corra un día por la conversión de zona horaria.
+function formatearFechaCorta(fechaISO) {
+  if (!fechaISO) return '';
+  const [, mes, dia] = fechaISO.split('-').map(Number);
+  return `${dia} ${MESES_CORTOS[mes - 1]}`;
+}
+
 export default function TrabajadorHome() {
   const { perfil } = useAuth();
   const [saldo, setSaldo] = useState(null);
@@ -111,12 +134,7 @@ export default function TrabajadorHome() {
                   <p className="text-sm font-bold text-[#153A5B]">{c.nombre_completo}</p>
                   <p className="text-xs text-slate-500">{c.area || 'Sin área'}</p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  {new Date(c.proximo_cumpleanos).toLocaleDateString('es-CL', {
-                    day: 'numeric',
-                    month: 'short',
-                  })}
-                </p>
+                <p className="text-xs text-slate-400">{formatearFechaCorta(c.proximo_cumpleanos)}</p>
               </div>
             ))}
           </div>
