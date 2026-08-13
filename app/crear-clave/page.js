@@ -35,11 +35,11 @@ export default function CrearClave() {
       return;
     }
 
-    if (session?.user?.id) {
-      await supabase
-        .from('trabajadores')
-        .update({ clave_definida: true })
-        .eq('id', session.user.id);
+    const { error: rpcError } = await supabase.rpc('fn_marcar_clave_definida');
+    if (rpcError) {
+      setEnviando(false);
+      setError('La contraseña se guardó, pero hubo un problema al continuar: ' + rpcError.message);
+      return;
     }
 
     setEnviando(false);
