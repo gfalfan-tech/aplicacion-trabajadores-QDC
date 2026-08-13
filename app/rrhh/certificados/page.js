@@ -48,7 +48,7 @@ export default function CertificadosRRHH() {
     setMensaje('');
 
     try {
-      generarCertificadoAntiguedadPdf(solicitud.trabajadores);
+      await generarCertificadoAntiguedadPdf(solicitud.trabajadores);
     } catch (e) {
       setMensaje('Error generando el PDF: ' + e.message);
       setProcesandoId(null);
