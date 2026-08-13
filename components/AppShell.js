@@ -17,12 +17,22 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
       router.replace('/login');
       return;
     }
+    if (perfil && !perfil.clave_definida) {
+      router.replace('/crear-clave');
+      return;
+    }
     if (requiereRRHH && !esRRHH) {
       router.replace('/trabajador');
     }
-  }, [cargando, session, esRRHH, requiereRRHH, router]);
+  }, [cargando, session, perfil, esRRHH, requiereRRHH, router]);
 
-  if (cargando || !session || !perfil || (requiereRRHH && !esRRHH)) {
+  if (
+    cargando ||
+    !session ||
+    !perfil ||
+    !perfil.clave_definida ||
+    (requiereRRHH && !esRRHH)
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
         Cargando…
