@@ -26,10 +26,16 @@ export default function CertificadosRRHH() {
   const [mensaje, setMensaje] = useState('');
 
   async function cargar() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('certificados_antiguedad')
-      .select('*, trabajadores(nombre_completo, rut, cargo, fecha_ingreso, tipo_contrato)')
+      .select(
+        '*, trabajadores!certificados_antiguedad_trabajador_id_fkey(nombre_completo, rut, cargo, fecha_ingreso, tipo_contrato)'
+      )
       .order('created_at', { ascending: false });
+    if (error) {
+      setMensaje('Error cargando solicitudes: ' + error.message);
+      return;
+    }
     setLista(data || []);
   }
 
