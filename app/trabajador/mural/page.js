@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
+import MuralPost from '@/components/MuralPost';
 import { trabajadorLinks } from '@/lib/navLinks';
 
-const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado: '📰' };
-
-export default function MuralTrabajador() {
+function MuralTrabajadorContenido() {
+  const { perfil } = useAuth();
+  const searchParams = useSearchParams();
+  const resaltadoId = searchParams.get('post');
   const [lista, setLista] = useState([]);
 
   useEffect(() => {
@@ -20,37 +24,37 @@ export default function MuralTrabajador() {
       .then(({ data }) => setLista(data || []));
   }, []);
 
+  useEffect(() => {
+    if (!resaltadoId || lista.length === 0) return;
+    const el = document.getElementById(`post-${resaltadoId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [resaltadoId, lista]);
+
+  if (!perfil) return null;
+
   return (
     <AppShell links={trabajadorLinks} titulo="Diario mural">
       <div className="space-y-3">
         {lista.map((p) => (
-          <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center text-lg">
-                {iconos[p.tipo] || '📰'}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold text-[#153A5B]">{p.titulo}</p>
-                <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
-                {p.imagen_url && (
-                  <img
-                    src={p.imagen_url}
-                    alt={p.titulo}
-                    className="mt-2 rounded-lg border border-slate-200 max-h-64 w-full object-cover"
-                  />
-                )}
-                <p className="text-[10px] text-slate-400 mt-2">
-                  {new Date(p.publicado_en).toLocaleDateString('es-CL', {
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </p>
-              </div>
-            </div>
-          </div>
+          <MuralPost
+            key={p.id}
+            post={p}
+            perfil={perfil}
+            esRRHH={false}
+            expirada={false}
+            resaltada={String(p.id) === resaltadoId}
+          />
         ))}
         {lista.length === 0 && <p className="text-sm text-slate-400">Aún no hay publicaciones.</p>}
       </div>
     </AppShell>
+  );
+}
+
+export default function MuralTrabajador() {
+  return (
+    <Suspense fallback={null}>
+      <MuralTrabajadorContenido />
+    </Suspense>
   );
 }

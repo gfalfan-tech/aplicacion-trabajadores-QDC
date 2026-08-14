@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNotificaciones } from '@/lib/useNotificaciones';
 
 function tiempoRelativo(fecha) {
@@ -17,6 +18,7 @@ function tiempoRelativo(fecha) {
 export default function NotificacionesBell({ trabajadorId }) {
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones(trabajadorId);
   const [abierto, setAbierto] = useState(false);
+  const router = useRouter();
   const ref = useRef(null);
 
   useEffect(() => {
@@ -26,6 +28,14 @@ export default function NotificacionesBell({ trabajadorId }) {
     document.addEventListener('mousedown', onClickFuera);
     return () => document.removeEventListener('mousedown', onClickFuera);
   }, []);
+
+  function abrirNotificacion(n) {
+    if (!n.leida) marcarLeida(n.id);
+    setAbierto(false);
+    if (n.referencia_tabla === 'publicaciones_mural' && n.referencia_id) {
+      router.push(`/trabajador/mural?post=${n.referencia_id}`);
+    }
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -47,10 +57,7 @@ export default function NotificacionesBell({ trabajadorId }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <p className="text-sm font-bold text-[#153A5B]">Notificaciones</p>
             {noLeidas > 0 && (
-              <button
-                onClick={marcarTodasLeidas}
-                className="text-[11px] font-semibold text-[#0F5C8C]"
-              >
+              <button onClick={marcarTodasLeidas} className="text-[11px] font-semibold text-[#0F5C8C]">
                 Marcar todas como leídas
               </button>
             )}
@@ -62,16 +69,14 @@ export default function NotificacionesBell({ trabajadorId }) {
             {notificaciones.map((n) => (
               <button
                 key={n.id}
-                onClick={() => marcarLeida(n.id)}
-                className={`w-full text-left px-4 py-3 hover:bg-slate-50 ${
-                  n.leida ? '' : 'bg-blue-50/50'
-                }`}
+                onClick={() => abrirNotificacion(n)}
+                className={`w-full text-left px-4 py-3 hover:bg-slate-50 ${n.leida ? '' : 'bg-blue-50/50'}`}
               >
                 <div className="flex items-center gap-2">
                   {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-[#0F5C8C] shrink-0" />}
                   <p className="text-xs font-bold text-[#153A5B]">{n.titulo}</p>
                 </div>
-                <p className="text-xs text-slate-600 mt-1">{n.cuerpo}</p>
+                {n.mensaje && <p className="text-xs text-slate-600 mt-1">{n.mensaje}</p>}
                 <p className="text-[10px] text-slate-400 mt-1">{tiempoRelativo(n.created_at)}</p>
               </button>
             ))}

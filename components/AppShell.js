@@ -60,12 +60,9 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
       <aside className="hidden md:flex md:w-60 md:flex-col bg-white border-r border-slate-200 md:fixed md:inset-y-0">
-        <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <img src="/qdc-logo.png" alt="QDC" className="h-8 w-auto" />
-            <span className="text-sm font-bold text-[#153A5B]">Portal QDC</span>
-          </div>
-          <NotificacionesBell trabajadorId={perfil.id} />
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-200">
+          <img src="/qdc-logo.png" alt="QDC" className="h-8 w-auto" />
+          <span className="text-sm font-bold text-[#153A5B]">Portal QDC</span>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {links.map((l) => (
@@ -113,7 +110,10 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
         </div>
 
         <main className="max-w-3xl mx-auto p-4 md:p-8">
-          <h1 className="hidden md:block text-xl font-bold text-[#153A5B] mb-6">{titulo}</h1>
+          <div className="hidden md:flex items-center justify-between mb-6">
+            <h1 className="text-xl font-bold text-[#153A5B]">{titulo}</h1>
+            <NotificacionesBell trabajadorId={perfil.id} />
+          </div>
           {children}
         </main>
       </div>
