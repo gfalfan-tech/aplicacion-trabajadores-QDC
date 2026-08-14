@@ -11,9 +11,11 @@ export default function MuralTrabajador() {
   const [lista, setLista] = useState([]);
 
   useEffect(() => {
+    const hoy = new Date().toISOString().slice(0, 10);
     supabase
       .from('publicaciones_mural')
       .select('*')
+      .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
       .order('publicado_en', { ascending: false })
       .then(({ data }) => setLista(data || []));
   }, []);

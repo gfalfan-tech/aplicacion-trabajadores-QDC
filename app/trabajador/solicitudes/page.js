@@ -21,6 +21,8 @@ export default function Solicitudes() {
     tipo_permiso_id: '',
     fecha_desde: '',
     fecha_hasta: '',
+    hora_desde: '',
+    hora_hasta: '',
     motivo: '',
   });
   const [enviando, setEnviando] = useState(false);
@@ -50,6 +52,8 @@ export default function Solicitudes() {
       tipo_permiso_id: Number(form.tipo_permiso_id),
       fecha_desde: form.fecha_desde,
       fecha_hasta: form.fecha_hasta,
+      hora_desde: form.hora_desde,
+      hora_hasta: form.hora_hasta,
       motivo: form.motivo,
     });
     setEnviando(false);
@@ -57,7 +61,14 @@ export default function Solicitudes() {
       setMensaje('Error: ' + error.message);
     } else {
       setMensaje('Solicitud enviada.');
-      setForm({ tipo_permiso_id: '', fecha_desde: '', fecha_hasta: '', motivo: '' });
+      setForm({
+        tipo_permiso_id: '',
+        fecha_desde: '',
+        fecha_hasta: '',
+        hora_desde: '',
+        hora_hasta: '',
+        motivo: '',
+      });
       cargar();
     }
   }
@@ -82,20 +93,48 @@ export default function Solicitudes() {
           ))}
         </select>
         <div className="grid grid-cols-2 gap-3">
-          <input
-            required
-            type="date"
-            value={form.fecha_desde}
-            onChange={(e) => setForm({ ...form, fecha_desde: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
-          />
-          <input
-            required
-            type="date"
-            value={form.fecha_hasta}
-            onChange={(e) => setForm({ ...form, fecha_hasta: e.target.value })}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
-          />
+          <div>
+            <label className="text-xs text-slate-500">Fecha desde</label>
+            <input
+              required
+              type="date"
+              value={form.fecha_desde}
+              onChange={(e) => setForm({ ...form, fecha_desde: e.target.value })}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500">Fecha hasta</label>
+            <input
+              required
+              type="date"
+              value={form.fecha_hasta}
+              onChange={(e) => setForm({ ...form, fecha_hasta: e.target.value })}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-slate-500">Hora desde</label>
+            <input
+              required
+              type="time"
+              value={form.hora_desde}
+              onChange={(e) => setForm({ ...form, hora_desde: e.target.value })}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500">Hora hasta</label>
+            <input
+              required
+              type="time"
+              value={form.hora_hasta}
+              onChange={(e) => setForm({ ...form, hora_hasta: e.target.value })}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
         </div>
         <textarea
           value={form.motivo}
@@ -126,6 +165,12 @@ export default function Solicitudes() {
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {s.fecha_desde} → {s.fecha_hasta}
+              {s.hora_desde && s.hora_hasta && (
+                <>
+                  {' '}
+                  · {s.hora_desde.slice(0, 5)} a {s.hora_hasta.slice(0, 5)} hrs
+                </>
+              )}
             </p>
           </div>
         ))}

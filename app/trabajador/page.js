@@ -59,9 +59,11 @@ export default function TrabajadorHome() {
       .limit(3)
       .then(({ data }) => setCumples(data || []));
 
+    const hoy = new Date().toISOString().slice(0, 10);
     supabase
       .from('publicaciones_mural')
       .select('*')
+      .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
       .order('publicado_en', { ascending: false })
       .limit(1)
       .then(({ data }) => setMural(data || []));

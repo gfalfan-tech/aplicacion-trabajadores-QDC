@@ -87,6 +87,9 @@ export default function RRHHHome() {
               </p>
               <p className="text-xs text-slate-500">
                 {item.fecha_desde} → {item.fecha_hasta}
+                {item.origen === 'permiso' && item.hora_desde && item.hora_hasta && (
+                  <> · {item.hora_desde.slice(0, 5)} a {item.hora_hasta.slice(0, 5)} hrs</>
+                )}
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
