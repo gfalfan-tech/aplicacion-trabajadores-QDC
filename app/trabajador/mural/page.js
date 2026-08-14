@@ -29,9 +29,16 @@ export default function MuralTrabajador() {
               <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center text-lg">
                 {iconos[p.tipo] || '📰'}
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-bold text-[#153A5B]">{p.titulo}</p>
                 <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
+                {p.imagen_url && (
+                  <img
+                    src={p.imagen_url}
+                    alt={p.titulo}
+                    className="mt-2 rounded-lg border border-slate-200 max-h-64 w-full object-cover"
+                  />
+                )}
                 <p className="text-[10px] text-slate-400 mt-2">
                   {new Date(p.publicado_en).toLocaleDateString('es-CL', {
                     day: 'numeric',
