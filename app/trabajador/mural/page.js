@@ -12,6 +12,11 @@ const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado:
 export default function MuralTrabajador() {
   const { perfil } = useAuth();
   const [lista, setLista] = useState([]);
+  const [ampliadas, setAmpliadas] = useState({});
+
+  function toggleAmpliada(id) {
+    setAmpliadas((a) => ({ ...a, [id]: !a[id] }));
+  }
 
   useEffect(() => {
     const hoy = new Date().toISOString().slice(0, 10);
@@ -39,7 +44,10 @@ export default function MuralTrabajador() {
                   <img
                     src={p.imagen_url}
                     alt={p.titulo}
-                    className="mt-2 rounded-lg border border-slate-200 w-full max-h-96 object-contain bg-slate-50"
+                    onClick={() => toggleAmpliada(p.id)}
+                    className={`mt-2 rounded-lg border border-slate-200 w-full object-contain bg-slate-50 cursor-zoom-in transition-all ${
+                      ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-96'
+                    }`}
                   />
                 )}
                 <p className="text-[10px] text-slate-400 mt-2">
