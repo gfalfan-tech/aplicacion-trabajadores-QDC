@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
+import MuralInteracciones from '@/components/MuralInteracciones';
 
 const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado: '📰' };
 
 export default function MuralTrabajador() {
+  const { perfil } = useAuth();
   const [lista, setLista] = useState([]);
 
   useEffect(() => {
@@ -45,6 +48,9 @@ export default function MuralTrabajador() {
                     month: 'long',
                   })}
                 </p>
+                {perfil && (
+                  <MuralInteracciones publicacionId={p.id} trabajadorId={perfil.id} />
+                )}
               </div>
             </div>
           </div>
