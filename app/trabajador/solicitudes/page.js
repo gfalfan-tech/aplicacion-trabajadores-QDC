@@ -13,6 +13,36 @@ const estadoStyle = {
   cancelada: 'bg-slate-100 text-slate-600',
 };
 
+function formatFecha(fechaISO) {
+  // Evita el corrimiento de un día por zona horaria al parsear "YYYY-MM-DD".
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  return new Date(anio, mes - 1, dia).toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function formatHora(horaHHMMSS) {
+  return horaHHMMSS ? horaHHMMSS.slice(0, 5) : '';
+}
+
+function fraseSolicitud(s, perfil) {
+  const dias =
+    s.fecha_desde === s.fecha_hasta
+      ? `el día ${formatFecha(s.fecha_desde)}`
+      : `desde el ${formatFecha(s.fecha_desde)} hasta el ${formatFecha(s.fecha_hasta)}`;
+
+  const horas =
+    s.hora_desde && s.hora_hasta
+      ? ` entre las ${formatHora(s.hora_desde)} y las ${formatHora(s.hora_hasta)} horas`
+      : '';
+
+  const motivo = (s.motivo && s.motivo.trim()) || s.tipos_permiso?.nombre || 'motivo no especificado';
+
+  return `Yo, ${perfil.nombre_completo}, RUT ${perfil.rut}, solicito permiso ${dias}${horas} por "${motivo}".`;
+}
+
 export default function Solicitudes() {
   const { perfil } = useAuth();
   const [tipos, setTipos] = useState([]);
@@ -153,24 +183,22 @@ export default function Solicitudes() {
       </form>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">MIS SOLICITUDES</p>
-      <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-        {lista.length === 0 && <p className="text-sm text-slate-400 p-4">Aún no tienes solicitudes.</p>}
+      <div className="space-y-3">
+        {lista.length === 0 && (
+          <p className="text-sm text-slate-400 bg-white rounded-xl border border-slate-200 p-4">
+            Aún no tienes solicitudes.
+          </p>
+        )}
         {lista.map((s) => (
-          <div key={s.id} className="px-4 py-3">
-            <div className="flex items-center justify-between">
+          <div key={s.id} className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-[#153A5B]">{s.tipos_permiso?.nombre}</p>
               <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoStyle[s.estado]}`}>
                 {s.estado}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              {s.fecha_desde} → {s.fecha_hasta}
-              {s.hora_desde && s.hora_hasta && (
-                <>
-                  {' '}
-                  · {s.hora_desde.slice(0, 5)} a {s.hora_hasta.slice(0, 5)} hrs
-                </>
-              )}
+            <p className="text-xs text-slate-600 italic leading-relaxed border-l-2 border-slate-200 pl-3">
+              {fraseSolicitud(s, perfil)}
             </p>
           </div>
         ))}
