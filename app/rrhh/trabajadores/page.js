@@ -76,6 +76,10 @@ export default function TrabajadoresRRHH() {
 
   async function crear(e) {
     e.preventDefault();
+    if (!form.roles.length) {
+      setMensaje('Debes dejar marcado al menos un rol (normalmente "trabajador").');
+      return;
+    }
     setEnviando(true);
     setMensaje('');
     const res = await fetch('/api/admin/create-trabajador', {
@@ -142,6 +146,12 @@ export default function TrabajadoresRRHH() {
 
   async function guardarEdicion(e) {
     e.preventDefault();
+    if (!editForm.roles.length) {
+      setMensaje(
+        'Debes dejar marcado al menos un rol (normalmente "trabajador") antes de guardar — si no, esa persona queda sin acceso a la app.'
+      );
+      return;
+    }
     setGuardandoEdicion(true);
     const { error } = await supabase
       .from('trabajadores')
