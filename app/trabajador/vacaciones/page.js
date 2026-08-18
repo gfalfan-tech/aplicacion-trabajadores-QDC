@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
+import { generarPdfVacaciones } from '@/lib/solicitudPdf';
 
 function diasHabiles(desde, hasta) {
   let d = new Date(desde);
@@ -57,20 +58,33 @@ export default function Vacaciones() {
     setEnviando(true);
     setMensaje('');
     const dias = diasHabiles(form.fecha_desde, form.fecha_hasta);
-    const { error } = await supabase.from('solicitudes_vacaciones').insert({
-      trabajador_id: perfil.id,
-      fecha_desde: form.fecha_desde,
-      fecha_hasta: form.fecha_hasta,
-      dias_habiles: dias,
-    });
+    const { data, error } = await supabase
+      .from('solicitudes_vacaciones')
+      .insert({
+        trabajador_id: perfil.id,
+        fecha_desde: form.fecha_desde,
+        fecha_hasta: form.fecha_hasta,
+        dias_habiles: dias,
+      })
+      .select()
+      .single();
     setEnviando(false);
     if (error) {
       setMensaje('Error: ' + error.message);
     } else {
-      setMensaje(`Solicitud enviada (${dias} días hábiles).`);
+      setMensaje(`Solicitud enviada (${dias} días hábiles). Se avisó a tu jefe directo para que la revise.`);
       setForm({ fecha_desde: '', fecha_hasta: '' });
       cargar();
+      if (data) {
+        supabase.functions
+          .invoke('notificar-revision', { body: { tipo: 'vacaciones', solicitud_id: data.id } })
+          .catch(() => {});
+      }
     }
+  }
+
+  async function verPdf(s) {
+    await generarPdfVacaciones(s, perfil);
   }
 
   if (!perfil) return null;
@@ -137,6 +151,14 @@ export default function Vacaciones() {
             <p className="text-xs text-slate-500 mt-1">
               {s.fecha_desde} → {s.fecha_hasta}
             </p>
+            {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+              <button
+                onClick={() => verPdf(s)}
+                className="mt-2 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+              >
+                Ver PDF
+              </button>
+            )}
           </div>
         ))}
       </div>

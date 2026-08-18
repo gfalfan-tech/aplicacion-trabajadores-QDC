@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
+import { generarPdfPermiso } from '@/lib/solicitudPdf';
 
 const estadoStyle = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -77,20 +78,24 @@ export default function Solicitudes() {
     e.preventDefault();
     setEnviando(true);
     setMensaje('');
-    const { error } = await supabase.from('solicitudes_permiso').insert({
-      trabajador_id: perfil.id,
-      tipo_permiso_id: Number(form.tipo_permiso_id),
-      fecha_desde: form.fecha_desde,
-      fecha_hasta: form.fecha_hasta,
-      hora_desde: form.hora_desde,
-      hora_hasta: form.hora_hasta,
-      motivo: form.motivo,
-    });
+    const { data, error } = await supabase
+      .from('solicitudes_permiso')
+      .insert({
+        trabajador_id: perfil.id,
+        tipo_permiso_id: Number(form.tipo_permiso_id),
+        fecha_desde: form.fecha_desde,
+        fecha_hasta: form.fecha_hasta,
+        hora_desde: form.hora_desde,
+        hora_hasta: form.hora_hasta,
+        motivo: form.motivo,
+      })
+      .select()
+      .single();
     setEnviando(false);
     if (error) {
       setMensaje('Error: ' + error.message);
     } else {
-      setMensaje('Solicitud enviada.');
+      setMensaje('Solicitud enviada. Se avisó a tu jefe directo para que la revise.');
       setForm({
         tipo_permiso_id: '',
         fecha_desde: '',
@@ -100,7 +105,19 @@ export default function Solicitudes() {
         motivo: '',
       });
       cargar();
+      if (data) {
+        supabase.functions
+          .invoke('notificar-revision', { body: { tipo: 'permiso', solicitud_id: data.id } })
+          .catch(() => {});
+      }
     }
+  }
+
+  async function verPdf(s) {
+    await generarPdfPermiso(
+      { ...s, tipo_permiso: s.tipos_permiso?.nombre },
+      perfil
+    );
   }
 
   if (!perfil) return null;
@@ -200,6 +217,14 @@ export default function Solicitudes() {
             <p className="text-xs text-slate-600 italic leading-relaxed border-l-2 border-slate-200 pl-3">
               {fraseSolicitud(s, perfil)}
             </p>
+            {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+              <button
+                onClick={() => verPdf(s)}
+                className="mt-3 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+              >
+                Ver PDF
+              </button>
+            )}
           </div>
         ))}
       </div>
