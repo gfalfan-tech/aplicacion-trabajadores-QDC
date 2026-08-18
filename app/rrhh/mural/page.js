@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
+import MuralInteracciones from '@/components/MuralInteracciones';
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -173,6 +174,9 @@ export default function MuralRRHH() {
                         : `Expira el ${p.fecha_expiracion}`
                       : 'Sin fecha de expiración'}
                   </p>
+                  {perfil && (
+                    <MuralInteracciones publicacionId={p.id} trabajadorId={perfil.id} puedeModerar />
+                  )}
                 </div>
                 <button
                   onClick={() => eliminar(p.id)}
