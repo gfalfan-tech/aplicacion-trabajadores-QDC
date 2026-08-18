@@ -67,7 +67,7 @@ export default function TrabajadorHome() {
       .order('publicado_en', { ascending: false })
       .limit(1)
       .then(({ data }) => setMural(data || []));
-  }, [perfil]);
+  }, [perfil?.id]);
 
   if (!perfil) return null;
 

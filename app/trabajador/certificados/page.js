@@ -35,7 +35,7 @@ export default function CertificadosTrabajador() {
 
   useEffect(() => {
     if (perfil) cargar();
-  }, [perfil]);
+  }, [perfil?.id]);
 
   const tieneSolicitudActiva = lista.some((s) => s.estado !== 'emitido');
 

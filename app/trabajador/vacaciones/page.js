@@ -50,7 +50,7 @@ export default function Vacaciones() {
 
   useEffect(() => {
     if (perfil) cargar();
-  }, [perfil]);
+  }, [perfil?.id]);
 
   async function enviar(e) {
     e.preventDefault();

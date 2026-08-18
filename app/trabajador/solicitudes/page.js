@@ -41,7 +41,7 @@ export default function Solicitudes() {
 
   useEffect(() => {
     if (perfil) cargar();
-  }, [perfil]);
+  }, [perfil?.id]);
 
   async function enviar(e) {
     e.preventDefault();
