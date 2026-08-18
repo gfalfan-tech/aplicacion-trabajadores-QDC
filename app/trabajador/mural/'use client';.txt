@@ -1,0 +1,118 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/useAuth';
+
+export default function NotificationBell() {
+  const { perfil } = useAuth();
+  const router = useRouter();
+  const [abierto, setAbierto] = useState(false);
+  const [notis, setNotis] = useState([]);
+  const boxRef = useRef(null);
+
+  async function cargar() {
+    if (!perfil) return;
+    const { data } = await supabase
+      .from('notificaciones')
+      .select('*')
+      .eq('trabajador_id', perfil.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setNotis(data || []);
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil?.id]);
+
+  useEffect(() => {
+    if (!perfil) return;
+    const canal = supabase
+      .channel('notificaciones-' + perfil.id)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notificaciones',
+          filter: `trabajador_id=eq.${perfil.id}`,
+        },
+        (payload) => {
+          setNotis((prev) => [payload.new, ...prev]);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [perfil]);
+
+  useEffect(() => {
+    function fuera(e) {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setAbierto(false);
+    }
+    document.addEventListener('mousedown', fuera);
+    return () => document.removeEventListener('mousedown', fuera);
+  }, []);
+
+  const noLeidas = notis.filter((n) => !n.leida).length;
+
+  async function irA(n) {
+    if (!n.leida) {
+      await supabase.from('notificaciones').update({ leida: true }).eq('id', n.id);
+      setNotis((prev) => prev.map((x) => (x.id === n.id ? { ...x, leida: true } : x)));
+    }
+    setAbierto(false);
+    if (n.publicacion_id) {
+      router.push(`/trabajador/mural?post=${n.publicacion_id}`);
+    }
+  }
+
+  if (!perfil) return null;
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <button
+        onClick={() => setAbierto((v) => !v)}
+        className="relative w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-lg"
+        aria-label="Notificaciones"
+      >
+        🔔
+        {noLeidas > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+            {noLeidas > 9 ? '9+' : noLeidas}
+          </span>
+        )}
+      </button>
+      {abierto && (
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl border border-slate-200 shadow-lg z-20 max-h-96 overflow-y-auto">
+          <p className="text-xs font-bold text-slate-400 px-3 py-2 border-b border-slate-100">Notificaciones</p>
+          {notis.length === 0 && <p className="text-xs text-slate-400 px-3 py-4">No tienes notificaciones.</p>}
+          {notis.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => irA(n)}
+              className={`w-full text-left px-3 py-2 border-b border-slate-50 hover:bg-slate-50 ${
+                n.leida ? '' : 'bg-[#E6F1FB]'
+              }`}
+            >
+              <p className="text-xs font-bold text-[#153A5B]">{n.titulo}</p>
+              {n.mensaje && <p className="text-[10px] text-slate-500 mt-0.5">{n.mensaje}</p>}
+              <p className="text-[9px] text-slate-400 mt-1">
+                {new Date(n.created_at).toLocaleString('es-CL', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
