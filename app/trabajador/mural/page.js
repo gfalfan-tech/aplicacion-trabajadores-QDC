@@ -39,7 +39,7 @@ export default function MuralTrabajador() {
                   <img
                     src={p.imagen_url}
                     alt={p.titulo}
-                    className="mt-2 rounded-lg border border-slate-200 max-h-64 w-full object-cover"
+                    className="mt-2 rounded-lg border border-slate-200 w-full max-h-96 object-contain bg-slate-50"
                   />
                 )}
                 <p className="text-[10px] text-slate-400 mt-2">
