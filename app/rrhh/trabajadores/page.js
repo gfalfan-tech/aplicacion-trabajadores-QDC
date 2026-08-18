@@ -95,7 +95,7 @@ export default function TrabajadoresRRHH() {
     cargar();
   }
 
-  function abrirEdicion(t) {
+  async function abrirEdicion(t) {
     setEditandoId(t.id);
     setEditForm({
       nombre_completo: t.nombre_completo || '',
@@ -110,7 +110,29 @@ export default function TrabajadoresRRHH() {
       registra_asistencia: t.registra_asistencia || 'SI',
       estado: t.estado || 'activo',
       roles: rolesPorTrabajador[t.id] || [],
+      dias_pendientes_base: 0,
+      dias_progresivos_reconocidos: 0,
     });
+
+    const { data: saldo } = await supabase
+      .from('vacaciones_saldo_inicial')
+      .select('dias_pendientes_base, dias_progresivos_reconocidos')
+      .eq('trabajador_id', t.id)
+      .order('fecha_corte', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (saldo) {
+      setEditForm((f) =>
+        f
+          ? {
+              ...f,
+              dias_pendientes_base: saldo.dias_pendientes_base || 0,
+              dias_progresivos_reconocidos: saldo.dias_progresivos_reconocidos || 0,
+            }
+          : f
+      );
+    }
   }
 
   function cerrarEdicion() {
@@ -161,6 +183,23 @@ export default function TrabajadoresRRHH() {
         setMensaje('Error al actualizar roles: ' + rolError.message);
         return;
       }
+    }
+
+    const resVacaciones = await fetch('/api/admin/actualizar-vacaciones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trabajador_id: editandoId,
+        dias_pendientes_base: editForm.dias_pendientes_base,
+        dias_progresivos_reconocidos: editForm.dias_progresivos_reconocidos,
+      }),
+    });
+    if (!resVacaciones.ok) {
+      const dataVacaciones = await resVacaciones.json();
+      setGuardandoEdicion(false);
+      setMensaje('Se guardaron los datos, pero hubo un error con las vacaciones: ' + dataVacaciones.error);
+      cargar();
+      return;
     }
 
     setGuardandoEdicion(false);
@@ -497,6 +536,38 @@ export default function TrabajadoresRRHH() {
                     </select>
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-slate-500">Vacaciones pendientes a la fecha</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={editForm.dias_pendientes_base}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, dias_pendientes_base: Number(e.target.value) })
+                      }
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500">Días progresivos a la fecha</label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      value={editForm.dias_progresivos_reconocidos}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          dias_progresivos_reconocidos: Number(e.target.value),
+                        })
+                      }
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-400 -mt-2">
+                  Al guardar se registra como el saldo "al día" desde hoy — no borra el historial anterior.
+                </p>
                 <select
                   value={editForm.estado}
                   onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}
