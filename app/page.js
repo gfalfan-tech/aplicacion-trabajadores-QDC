@@ -14,7 +14,12 @@ export default function Home() {
       router.replace('/login');
       return;
     }
-    if (perfil && !perfil.clave_definida) {
+    // Igual que en AppShell: hay que esperar a que el perfil (y con él, los
+    // roles) terminen de cargar antes de decidir a dónde mandar a alguien.
+    // Si no, esRRHH todavía vale "false" por defecto y a un RRHH lo manda
+    // siempre a /trabajador antes de saber que en realidad es RRHH.
+    if (!perfil) return;
+    if (!perfil.clave_definida) {
       router.replace('/crear-clave');
       return;
     }
