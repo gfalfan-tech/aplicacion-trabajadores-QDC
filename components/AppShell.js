@@ -36,7 +36,14 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
       router.replace('/login');
       return;
     }
-    if (perfil && !perfil.clave_definida) {
+    // Ojo: el perfil y los roles se cargan aparte (y un poco después) de la
+    // sesión. Sin este "if (!perfil) return", justo en ese instante en que
+    // ya hay sesión pero el perfil/roles todavía no llegan, esRRHH vale
+    // "false" por defecto y esto mandaba a un RRHH de vuelta a /trabajador
+    // antes de que alcanzara a cargar su rol real — el "cambio de perfil"
+    // random al navegar.
+    if (!perfil) return;
+    if (!perfil.clave_definida) {
       router.replace('/crear-clave');
       return;
     }
