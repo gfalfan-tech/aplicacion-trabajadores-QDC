@@ -72,6 +72,11 @@ export async function GET(req) {
   configurarFuentes();
 
   const { anio: anioActual, mes: mesHoy, dia: diaHoy } = hoyChile();
+  // La publicación debe durar solo el día de la celebración: se guarda como
+  // fecha de expiración el propio día de hoy, porque el mural muestra un
+  // post mientras fecha_expiracion >= hoy y deja de mostrarlo al día
+  // siguiente (ver app/trabajador/mural/page.js y app/trabajador/page.js).
+  const fechaExpiracionISO = `${anioActual}-${String(mesHoy).padStart(2, '0')}-${String(diaHoy).padStart(2, '0')}`;
 
   const { data: publicador } = await admin
     .from('trabajadores')
@@ -130,7 +135,7 @@ export async function GET(req) {
             contenido: 'Los colaboradores de QDC te desean un muy lindo día. ¡Felicidades!',
             tipo: 'imagen',
             imagen_url: imagenUrl,
-            fecha_expiracion: null,
+            fecha_expiracion: fechaExpiracionISO,
             publicado_por: publicadoPor,
           })
           .select()
@@ -180,7 +185,7 @@ export async function GET(req) {
               contenido: `Hoy celebra ${anios} ${anios === 1 ? 'año' : 'años'} como parte del equipo QDC. ¡Gracias por tu compromiso y dedicación!`,
               tipo: 'imagen',
               imagen_url: imagenUrl,
-              fecha_expiracion: null,
+              fecha_expiracion: fechaExpiracionISO,
               publicado_por: publicadoPor,
             })
             .select()
