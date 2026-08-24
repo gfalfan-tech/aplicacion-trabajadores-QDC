@@ -174,6 +174,15 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
             <span className="text-xs font-bold text-[#153A5B]">{titulo}</span>
           </div>
           <div className="flex items-center gap-2">
+            {esRRHH && (
+              <Link
+                href={otraVista.href}
+                title={otraVista.label}
+                className="w-8 h-8 rounded-full border border-slate-200 text-[#0F5C8C] text-base flex items-center justify-center"
+              >
+                ⇄
+              </Link>
+            )}
             <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
             <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
               {iniciales}
