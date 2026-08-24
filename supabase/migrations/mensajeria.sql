@@ -7,6 +7,16 @@
 -- esa conversación. No existe ninguna política que le dé acceso a
 -- RRHH ni a administradores — a propósito, para que nadie más pueda
 -- leer chats privados de otras personas.
+--
+-- IMPORTANTE (fix): las políticas de conversaciones_participantes NO
+-- pueden consultar la propia tabla conversaciones_participantes
+-- dentro de un "using"/"with check" de esa misma tabla, porque eso
+-- provoca "infinite recursion detected in policy for relation
+-- conversaciones_participantes" (Postgres vuelve a evaluar la RLS al
+-- hacer la subconsulta). La solución estándar es mover esas
+-- comprobaciones a funciones "security definer", que se ejecutan con
+-- privilegios del dueño de la función y por lo tanto no vuelven a
+-- disparar la política sobre la misma tabla.
 -- =========================================================
 
 -- -----------------------------------------------------
@@ -43,7 +53,47 @@ create index if not exists idx_participantes_trabajador on conversaciones_partic
 create index if not exists idx_mensajes_conversacion on mensajes(conversacion_id, creado_en);
 
 -- -----------------------------------------------------
--- 2. RLS
+-- 2. Funciones "security definer" para evitar la recursión
+--    de RLS sobre conversaciones_participantes.
+--    (search_path fijo por seguridad; no hacen bypass de nada más
+--    que la propia RLS de esta tabla, y solo devuelven un booleano.)
+-- -----------------------------------------------------
+create or replace function fn_es_participante(p_conversacion_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from conversaciones_participantes cp
+    where cp.conversacion_id = p_conversacion_id
+      and cp.trabajador_id = auth.uid()
+  );
+$$;
+
+create or replace function fn_es_admin_conversacion(p_conversacion_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from conversaciones_participantes cp
+    where cp.conversacion_id = p_conversacion_id
+      and cp.trabajador_id = auth.uid()
+      and cp.es_admin = true
+  );
+$$;
+
+revoke all on function fn_es_participante(uuid) from public;
+revoke all on function fn_es_admin_conversacion(uuid) from public;
+grant execute on function fn_es_participante(uuid) to authenticated;
+grant execute on function fn_es_admin_conversacion(uuid) to authenticated;
+
+-- -----------------------------------------------------
+-- 3. RLS
 -- -----------------------------------------------------
 alter table conversaciones enable row level security;
 alter table conversaciones_participantes enable row level security;
@@ -53,10 +103,7 @@ alter table mensajes enable row level security;
 drop policy if exists "participante lee su conversacion" on conversaciones;
 create policy "participante lee su conversacion"
   on conversaciones for select
-  using (exists (
-    select 1 from conversaciones_participantes cp
-    where cp.conversacion_id = conversaciones.id and cp.trabajador_id = auth.uid()
-  ));
+  using (fn_es_participante(id));
 
 drop policy if exists "cualquiera crea una conversacion" on conversaciones;
 create policy "cualquiera crea una conversacion"
@@ -68,23 +115,14 @@ create policy "admin elimina su grupo"
   on conversaciones for delete
   using (
     tipo = 'grupo'
-    and exists (
-      select 1 from conversaciones_participantes cp
-      where cp.conversacion_id = conversaciones.id
-        and cp.trabajador_id = auth.uid()
-        and cp.es_admin = true
-    )
+    and fn_es_admin_conversacion(id)
   );
 
 -- --- conversaciones_participantes ---
 drop policy if exists "participante ve la lista de su conversacion" on conversaciones_participantes;
 create policy "participante ve la lista de su conversacion"
   on conversaciones_participantes for select
-  using (exists (
-    select 1 from conversaciones_participantes cp2
-    where cp2.conversacion_id = conversaciones_participantes.conversacion_id
-      and cp2.trabajador_id = auth.uid()
-  ));
+  using (fn_es_participante(conversacion_id));
 
 drop policy if exists "creador o admin agrega participantes" on conversaciones_participantes;
 create policy "creador o admin agrega participantes"
@@ -94,12 +132,7 @@ create policy "creador o admin agrega participantes"
       select 1 from conversaciones c
       where c.id = conversacion_id and c.creado_por = auth.uid()
     )
-    or exists (
-      select 1 from conversaciones_participantes cp
-      where cp.conversacion_id = conversaciones_participantes.conversacion_id
-        and cp.trabajador_id = auth.uid()
-        and cp.es_admin = true
-    )
+    or fn_es_admin_conversacion(conversacion_id)
   );
 
 drop policy if exists "participante actualiza su propia lectura" on conversaciones_participantes;
@@ -113,32 +146,21 @@ create policy "admin quita participantes o uno se sale"
   on conversaciones_participantes for delete
   using (
     trabajador_id = auth.uid()
-    or exists (
-      select 1 from conversaciones_participantes cp
-      where cp.conversacion_id = conversaciones_participantes.conversacion_id
-        and cp.trabajador_id = auth.uid()
-        and cp.es_admin = true
-    )
+    or fn_es_admin_conversacion(conversacion_id)
   );
 
 -- --- mensajes ---
 drop policy if exists "participante lee mensajes de su conversacion" on mensajes;
 create policy "participante lee mensajes de su conversacion"
   on mensajes for select
-  using (exists (
-    select 1 from conversaciones_participantes cp
-    where cp.conversacion_id = mensajes.conversacion_id and cp.trabajador_id = auth.uid()
-  ));
+  using (fn_es_participante(conversacion_id));
 
 drop policy if exists "participante envia mensajes" on mensajes;
 create policy "participante envia mensajes"
   on mensajes for insert
   with check (
     trabajador_id = auth.uid()
-    and exists (
-      select 1 from conversaciones_participantes cp
-      where cp.conversacion_id = mensajes.conversacion_id and cp.trabajador_id = auth.uid()
-    )
+    and fn_es_participante(conversacion_id)
   );
 
 drop policy if exists "autor elimina su mensaje" on mensajes;
@@ -147,7 +169,7 @@ create policy "autor elimina su mensaje"
   using (trabajador_id = auth.uid());
 
 -- -----------------------------------------------------
--- 3. Vista de resumen: mis conversaciones, con no leídos y
+-- 4. Vista de resumen: mis conversaciones, con no leídos y
 --    último mensaje. security_invoker para que respete la RLS
 --    de quien está consultando (no de quien creó la vista).
 -- -----------------------------------------------------
@@ -197,7 +219,7 @@ join conversaciones_participantes mp on mp.conversacion_id = c.id
 where mp.trabajador_id = auth.uid();
 
 -- -----------------------------------------------------
--- 4. Realtime: para que los mensajes lleguen en vivo.
+-- 5. Realtime: para que los mensajes lleguen en vivo.
 --    (Si ya estaban agregadas, este bloque no falla.)
 -- -----------------------------------------------------
 do $$
