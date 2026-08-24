@@ -100,10 +100,15 @@ alter table conversaciones_participantes enable row level security;
 alter table mensajes enable row level security;
 
 -- --- conversaciones ---
+-- Incluye "creado_por = auth.uid()" además de fn_es_participante(id) porque
+-- justo después de crear la conversación (insert().select() en una sola
+-- llamada) todavía no existe la fila en conversaciones_participantes que
+-- lo marque como participante — sin esto, el insert "funciona" pero el
+-- select que lo acompaña falla con "violates row-level security policy".
 drop policy if exists "participante lee su conversacion" on conversaciones;
 create policy "participante lee su conversacion"
   on conversaciones for select
-  using (fn_es_participante(id));
+  using (creado_por = auth.uid() or fn_es_participante(id));
 
 drop policy if exists "cualquiera crea una conversacion" on conversaciones;
 create policy "cualquiera crea una conversacion"
