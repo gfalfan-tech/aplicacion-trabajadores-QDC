@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
-import AppShell from '@/components/AppShell';
+import AppShell, { CLAVE_ULTIMA_VISTA } from '@/components/AppShell';
 import { trabajadorLinks, rrhhLinks } from '@/lib/navLinks';
 import { useConversaciones } from '@/lib/useConversaciones';
 
@@ -23,7 +23,15 @@ function tiempoRelativo(fecha) {
 
 export default function MensajesPage() {
   const { perfil, esRRHH } = useAuth();
-  const links = esRRHH ? rrhhLinks : trabajadorLinks;
+  // /mensajes es una pantalla "neutral" (no vive bajo /rrhh ni /trabajador),
+  // así que para alguien con doble rol (RRHH que también puede navegar como
+  // trabajador) hay que mostrarle el menú de la vista en la que estaba
+  // navegando, no siempre el de RRHH solo porque tiene ese rol.
+  const [vistaGuardada, setVistaGuardada] = useState(null);
+  useEffect(() => {
+    setVistaGuardada(window.localStorage.getItem(CLAVE_ULTIMA_VISTA));
+  }, []);
+  const links = esRRHH && vistaGuardada !== 'trabajador' ? rrhhLinks : trabajadorLinks;
   const { conversaciones, recargar } = useConversaciones(perfil?.id);
 
   const [activaId, setActivaId] = useState(null);

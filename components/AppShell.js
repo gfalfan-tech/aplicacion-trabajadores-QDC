@@ -9,6 +9,7 @@ import NotificacionesBell from '@/components/NotificacionesBell';
 import { useConversaciones } from '@/lib/useConversaciones';
 
 const CLAVE_COLAPSADO = 'qdc_menu_colapsado';
+export const CLAVE_ULTIMA_VISTA = 'qdc_ultima_vista';
 
 export default function AppShell({ links, titulo, children, requiereRRHH = false }) {
   const pathname = usePathname();
@@ -21,6 +22,19 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
     const guardado = window.localStorage.getItem(CLAVE_COLAPSADO);
     if (guardado === '1') setColapsado(true);
   }, []);
+
+  // Recuerda si la última pantalla que se visitó fue del panel RR.HH. o de
+  // la vista trabajador. Páginas "neutrales" como /mensajes usan esto para
+  // saber qué menú mostrarle a alguien con doble rol (RRHH que además
+  // puede navegar como trabajador) — de lo contrario esas pantallas solo
+  // miran el rol y siempre lo mandan de vuelta a RR.HH.
+  useEffect(() => {
+    if (pathname.startsWith('/rrhh')) {
+      window.localStorage.setItem(CLAVE_ULTIMA_VISTA, 'rrhh');
+    } else if (pathname.startsWith('/trabajador')) {
+      window.localStorage.setItem(CLAVE_ULTIMA_VISTA, 'trabajador');
+    }
+  }, [pathname]);
 
   function toggleColapsado() {
     setColapsado((v) => {
