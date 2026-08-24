@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell, { CLAVE_ULTIMA_VISTA } from '@/components/AppShell';
 import { trabajadorLinks, rrhhLinks } from '@/lib/navLinks';
 import { useConversaciones } from '@/lib/useConversaciones';
+import Avatar from '@/components/Avatar';
 
 const EMOJIS_RAPIDOS = ['👍', '🙌', '😀', '😂', '❤️', '🙏', '🎉', '👏', '😢', '🔥'];
 
@@ -57,7 +58,7 @@ export default function MensajesPage() {
   async function cargarMensajes(id) {
     const { data } = await supabase
       .from('mensajes')
-      .select('id, texto, creado_en, trabajador_id, trabajadores(nombre_completo)')
+      .select('id, texto, creado_en, trabajador_id, trabajadores(nombre_completo, avatar_url)')
       .eq('conversacion_id', id)
       .order('creado_en', { ascending: true });
     setMensajes(data || []);
@@ -66,7 +67,7 @@ export default function MensajesPage() {
   async function cargarParticipantes(id) {
     const { data } = await supabase
       .from('conversaciones_participantes')
-      .select('trabajador_id, es_admin, trabajadores(nombre_completo)')
+      .select('trabajador_id, es_admin, trabajadores(nombre_completo, avatar_url)')
       .eq('conversacion_id', id);
     setParticipantes(data || []);
   }
@@ -135,7 +136,7 @@ export default function MensajesPage() {
     if (!perfil) return;
     const { data } = await supabase
       .from('trabajadores')
-      .select('id, nombre_completo, cargo')
+      .select('id, nombre_completo, cargo, avatar_url')
       .neq('id', perfil.id)
       .order('nombre_completo');
     setDirectorio(data || []);
@@ -310,27 +311,33 @@ export default function MensajesPage() {
                 <button
                   key={c.conversacion_id}
                   onClick={() => abrir(c.conversacion_id)}
-                  className={`w-full text-left px-3 py-3 hover:bg-slate-50 ${
+                  className={`w-full text-left px-3 py-3 hover:bg-slate-50 flex items-start gap-2 ${
                     c.conversacion_id === activaId ? 'bg-[#E6F1FB]' : ''
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-[#153A5B] truncate">
-                      {c.tipo === 'grupo' ? '👥 ' : ''}
-                      {nombre}
+                  {c.tipo === 'grupo' ? (
+                    <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-lg flex items-center justify-center shrink-0">
+                      👥
+                    </div>
+                  ) : (
+                    <Avatar url={c.otro_avatar_url} nombre={nombre} size={36} />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-bold text-[#153A5B] truncate">{nombre}</p>
+                      {c.no_leidos > 0 && (
+                        <span className="bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shrink-0">
+                          {c.no_leidos > 9 ? '9+' : c.no_leidos}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">
+                      {c.ultimo_texto || 'Sin mensajes todavía.'}
                     </p>
-                    {c.no_leidos > 0 && (
-                      <span className="bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shrink-0">
-                        {c.no_leidos > 9 ? '9+' : c.no_leidos}
-                      </span>
+                    {c.ultimo_en && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">{tiempoRelativo(c.ultimo_en)}</p>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 truncate mt-0.5">
-                    {c.ultimo_texto || 'Sin mensajes todavía.'}
-                  </p>
-                  {c.ultimo_en && (
-                    <p className="text-[10px] text-slate-400 mt-0.5">{tiempoRelativo(c.ultimo_en)}</p>
-                  )}
                 </button>
               );
             })}
@@ -476,6 +483,7 @@ export default function MensajesPage() {
                       className="shrink-0"
                     />
                   )}
+                  <Avatar url={t.avatar_url} nombre={t.nombre_completo} size={32} />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-[#153A5B] truncate">{t.nombre_completo}</p>
                     {t.cargo && <p className="text-xs text-slate-500 truncate">{t.cargo}</p>}
@@ -516,8 +524,9 @@ export default function MensajesPage() {
             </div>
             <div className="flex-1 overflow-y-auto divide-y divide-slate-100 px-4">
               {participantes.map((p) => (
-                <div key={p.trabajador_id} className="py-2.5 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
+                <div key={p.trabajador_id} className="py-2.5 flex items-center gap-2">
+                  <Avatar url={p.trabajadores?.avatar_url} nombre={p.trabajadores?.nombre_completo} size={32} />
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-[#153A5B] truncate">
                       {p.trabajadores?.nombre_completo || 'Trabajador'}
                       {p.trabajador_id === perfil.id ? ' (tú)' : ''}

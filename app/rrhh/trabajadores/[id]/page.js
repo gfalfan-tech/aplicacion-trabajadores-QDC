@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import { generarPdfPermiso, generarPdfVacaciones } from '@/lib/solicitudPdf';
+import Avatar from '@/components/Avatar';
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -152,20 +153,34 @@ export default function VerPerfilTrabajador() {
 
       {!cargando && trabajador && (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-base font-bold text-[#153A5B]">{trabajador.nombre_completo}</p>
-              {trabajador.estado === 'inactivo' && (
-                <span className="text-[10px] font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5">
-                  inactivo
-                </span>
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="relative h-32 sm:h-40 bg-gradient-to-br from-[#0F5C8C] to-[#153A5B]">
+              {trabajador.banner_url && (
+                <img
+                  src={trabajador.banner_url}
+                  alt="Portada"
+                  className="w-full h-full object-cover"
+                />
               )}
             </div>
-            <p className="text-xs text-slate-500 mb-3">
-              Vista de solo lectura — esto es lo que {trabajador.nombre_completo.split(' ')[0]} ve en su
-              propio perfil. No puedes editar datos desde aquí.
-            </p>
-            <div className="divide-y divide-slate-100 border-t border-slate-100">
+            <div className="px-4 sm:px-6">
+              <div className="-mt-10 sm:-mt-12 inline-block rounded-full ring-4 ring-white bg-white">
+                <Avatar url={trabajador.avatar_url} nombre={trabajador.nombre_completo} size={80} />
+              </div>
+              <div className="flex items-center justify-between mb-1 pt-2">
+                <p className="text-base font-bold text-[#153A5B]">{trabajador.nombre_completo}</p>
+                {trabajador.estado === 'inactivo' && (
+                  <span className="text-[10px] font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5">
+                    inactivo
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mb-3">
+                Vista de solo lectura — esto es lo que {trabajador.nombre_completo.split(' ')[0]} ve en su
+                propio perfil. No puedes editar datos desde aquí.
+              </p>
+            </div>
+            <div className="divide-y divide-slate-100 border-t border-slate-100 px-4 sm:px-6 pb-2">
               {[
                 ['RUT', trabajador.rut],
                 ['Correo', trabajador.email],

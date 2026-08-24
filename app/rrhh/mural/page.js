@@ -8,9 +8,22 @@ import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import MuralInteracciones from '@/components/MuralInteracciones';
 import { sanitizeFileName } from '@/lib/sanitizeFileName';
+import Avatar from '@/components/Avatar';
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function tiempoRelativoPost(fecha) {
+  const diffMs = Date.now() - new Date(fecha).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 7) return `hace ${dias} d`;
+  return new Date(fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
 }
 
 export default function MuralRRHH() {
@@ -45,7 +58,7 @@ function MuralRRHHContenido() {
   async function cargar() {
     const { data } = await supabase
       .from('publicaciones_mural')
-      .select('*')
+      .select('*, trabajadores(nombre_completo, avatar_url)')
       .order('publicado_en', { ascending: false });
     setLista(data || []);
   }
@@ -187,34 +200,41 @@ function MuralRRHHContenido() {
               }`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-[#153A5B]">{p.titulo}</p>
-                  <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
-                  {p.imagen_url && (
-                    <img
-                      src={p.imagen_url}
-                      alt={p.titulo}
-                      onClick={() => toggleAmpliada(p.id)}
-                      className={`mt-2 rounded-lg border border-slate-200 w-full object-contain bg-slate-50 cursor-zoom-in transition-all ${
-                        ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-96'
-                      }`}
-                    />
-                  )}
-                  <p className="text-[10px] text-slate-400 mt-2">
-                    {p.fecha_expiracion
-                      ? expirada
-                        ? `Expiró el ${p.fecha_expiracion}`
-                        : `Expira el ${p.fecha_expiracion}`
-                      : 'Sin fecha de expiración'}
-                  </p>
-                  {perfil && (
-                    <MuralInteracciones
-                      publicacionId={p.id}
-                      trabajadorId={perfil.id}
-                      puedeModerar
-                      abrirComentariosInicial={postDestacado === p.id}
-                    />
-                  )}
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Avatar url={p.trabajadores?.avatar_url} nombre={p.trabajadores?.nombre_completo} size={40} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[#153A5B]">
+                      {p.trabajadores?.nombre_completo || 'Portal QDC'}
+                    </p>
+                    <p className="text-[10px] text-slate-400">{tiempoRelativoPost(p.publicado_en)}</p>
+                    <p className="text-sm font-bold text-[#153A5B] mt-2">{p.titulo}</p>
+                    <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
+                    {p.imagen_url && (
+                      <img
+                        src={p.imagen_url}
+                        alt={p.titulo}
+                        onClick={() => toggleAmpliada(p.id)}
+                        className={`mt-2 rounded-lg border border-slate-200 w-full object-contain bg-slate-50 cursor-zoom-in transition-all ${
+                          ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-96'
+                        }`}
+                      />
+                    )}
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      {p.fecha_expiracion
+                        ? expirada
+                          ? `Expiró el ${p.fecha_expiracion}`
+                          : `Expira el ${p.fecha_expiracion}`
+                        : 'Sin fecha de expiración'}
+                    </p>
+                    {perfil && (
+                      <MuralInteracciones
+                        publicacionId={p.id}
+                        trabajadorId={perfil.id}
+                        puedeModerar
+                        abrirComentariosInicial={postDestacado === p.id}
+                      />
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => eliminar(p.id)}

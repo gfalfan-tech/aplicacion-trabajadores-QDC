@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import Avatar from '@/components/Avatar';
 
 const REACCIONES = [
   { tipo: 'me_gusta', emoji: '👍', label: 'Me gusta' },
@@ -45,7 +46,7 @@ export default function MuralInteracciones({
   async function cargarComentarios() {
     const { data } = await supabase
       .from('mural_comentarios')
-      .select('id, texto, created_at, trabajador_id, trabajadores(nombre_completo)')
+      .select('id, texto, created_at, trabajador_id, trabajadores(nombre_completo, avatar_url)')
       .eq('publicacion_id', publicacionId)
       .order('created_at', { ascending: true });
     setComentarios(data || []);
@@ -168,24 +169,27 @@ export default function MuralInteracciones({
       {mostrarComentarios && (
         <div className="mt-3 space-y-2">
           {comentarios.map((c) => (
-            <div key={c.id} className="bg-slate-50 rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold text-[#153A5B]">
-                  {c.trabajadores?.nombre_completo || 'Trabajador'}
-                </p>
-                <div className="flex items-center gap-2 shrink-0">
-                  <p className="text-[10px] text-slate-400">{tiempoRelativo(c.created_at)}</p>
-                  {(c.trabajador_id === trabajadorId || puedeModerar) && (
-                    <button
-                      onClick={() => eliminarComentario(c.id)}
-                      className="text-[10px] font-bold text-red-600"
-                    >
-                      Eliminar
-                    </button>
-                  )}
+            <div key={c.id} className="flex items-start gap-2">
+              <Avatar url={c.trabajadores?.avatar_url} nombre={c.trabajadores?.nombre_completo} size={28} />
+              <div className="flex-1 bg-slate-50 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-[#153A5B]">
+                    {c.trabajadores?.nombre_completo || 'Trabajador'}
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className="text-[10px] text-slate-400">{tiempoRelativo(c.created_at)}</p>
+                    {(c.trabajador_id === trabajadorId || puedeModerar) && (
+                      <button
+                        onClick={() => eliminarComentario(c.id)}
+                        className="text-[10px] font-bold text-red-600"
+                      >
+                        Eliminar
+                      </button>
+                    )}
+                  </div>
                 </div>
+                <p className="text-xs text-slate-700 mt-1">{c.texto}</p>
               </div>
-              <p className="text-xs text-slate-700 mt-1">{c.texto}</p>
             </div>
           ))}
           {comentarios.length === 0 && (

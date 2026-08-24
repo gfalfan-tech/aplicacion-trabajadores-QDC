@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import NotificacionesBell from '@/components/NotificacionesBell';
 import { useConversaciones } from '@/lib/useConversaciones';
+import Avatar from '@/components/Avatar';
 
 const CLAVE_COLAPSADO = 'qdc_menu_colapsado';
 export const CLAVE_ULTIMA_VISTA = 'qdc_ultima_vista';
@@ -79,13 +80,6 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
       </div>
     );
   }
-
-  const iniciales = (perfil.nombre_completo || '??')
-    .split(' ')
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
 
   async function salir() {
     await supabase.auth.signOut();
@@ -183,9 +177,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
           <h1 className="text-lg font-bold text-[#153A5B]">{titulo}</h1>
           <div className="flex items-center gap-3">
             <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
-            <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
-              {iniciales}
-            </div>
+            <Avatar url={perfil.avatar_url} nombre={perfil.nombre_completo} size={32} />
           </div>
         </div>
 
@@ -205,9 +197,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
               </Link>
             )}
             <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
-            <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
-              {iniciales}
-            </div>
+            <Avatar url={perfil.avatar_url} nombre={perfil.nombre_completo} size={32} />
           </div>
         </div>
 

@@ -218,7 +218,14 @@ select
     from conversaciones_participantes cp3
     where cp3.conversacion_id = c.id and cp3.trabajador_id <> mp.trabajador_id
     limit 1
-  ) as otro_id
+  ) as otro_id,
+  (
+    select t3.avatar_url
+    from conversaciones_participantes cp4
+    join trabajadores t3 on t3.id = cp4.trabajador_id
+    where cp4.conversacion_id = c.id and cp4.trabajador_id <> mp.trabajador_id
+    limit 1
+  ) as otro_avatar_url
 from conversaciones c
 join conversaciones_participantes mp on mp.conversacion_id = c.id
 where mp.trabajador_id = auth.uid();

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
+import Avatar from '@/components/Avatar';
 
 const vacio = {
   nombre_completo: '',
@@ -46,6 +47,7 @@ export default function TrabajadoresRRHH() {
       .from('trabajadores')
       .select('*, areas(nombre)')
       .order('nombre_completo');
+    // avatar_url ya viene incluido por el select('*')
     setLista(data || []);
     const { data: a } = await supabase.from('areas').select('*').order('nombre');
     setAreas(a || []);
@@ -400,18 +402,21 @@ export default function TrabajadoresRRHH() {
         {lista.map((t) => (
           <div key={t.id} className="px-4 py-3">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-[#153A5B]">
-                  {t.nombre_completo}
-                  {t.estado === 'inactivo' && (
-                    <span className="ml-2 text-[10px] font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5">
-                      inactivo
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {t.cargo || 'Sin cargo'} · {t.areas?.nombre || 'Sin área'} · {t.rut}
-                </p>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar url={t.avatar_url} nombre={t.nombre_completo} size={36} />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-[#153A5B] truncate">
+                    {t.nombre_completo}
+                    {t.estado === 'inactivo' && (
+                      <span className="ml-2 text-[10px] font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5">
+                        inactivo
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-slate-500 truncate">
+                    {t.cargo || 'Sin cargo'} · {t.areas?.nombre || 'Sin área'} · {t.rut}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Link

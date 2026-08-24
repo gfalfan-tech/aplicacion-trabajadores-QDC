@@ -7,8 +7,21 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import MuralInteracciones from '@/components/MuralInteracciones';
+import Avatar from '@/components/Avatar';
 
 const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado: '📰' };
+
+function tiempoRelativoPost(fecha) {
+  const diffMs = Date.now() - new Date(fecha).getTime();
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  if (dias < 7) return `hace ${dias} d`;
+  return new Date(fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'long' });
+}
 
 export default function MuralTrabajador() {
   return (
@@ -33,7 +46,7 @@ function MuralTrabajadorContenido() {
     const hoy = new Date().toISOString().slice(0, 10);
     supabase
       .from('publicaciones_mural')
-      .select('*')
+      .select('*, trabajadores(nombre_completo, avatar_url)')
       .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
       .order('publicado_en', { ascending: false })
       .then(({ data }) => setLista(data || []));
@@ -59,11 +72,16 @@ function MuralTrabajadorContenido() {
             }`}
           >
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center text-lg">
-                {iconos[p.tipo] || '📰'}
-              </div>
+              <Avatar url={p.trabajadores?.avatar_url} nombre={p.trabajadores?.nombre_completo} size={40} />
               <div className="flex-1">
-                <p className="text-sm font-bold text-[#153A5B]">{p.titulo}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-[#153A5B]">
+                    {p.trabajadores?.nombre_completo || 'Portal QDC'}
+                  </p>
+                  <span className="text-sm">{iconos[p.tipo] || '📰'}</span>
+                </div>
+                <p className="text-[10px] text-slate-400">{tiempoRelativoPost(p.publicado_en)}</p>
+                <p className="text-sm font-bold text-[#153A5B] mt-2">{p.titulo}</p>
                 <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
                 {p.imagen_url && (
                   <img
@@ -75,12 +93,6 @@ function MuralTrabajadorContenido() {
                     }`}
                   />
                 )}
-                <p className="text-[10px] text-slate-400 mt-2">
-                  {new Date(p.publicado_en).toLocaleDateString('es-CL', {
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </p>
                 {perfil && (
                   <MuralInteracciones
                     publicacionId={p.id}
