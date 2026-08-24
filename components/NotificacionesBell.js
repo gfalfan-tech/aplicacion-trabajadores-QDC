@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNotificaciones } from '@/lib/useNotificaciones';
+import { rutaDeNotificacion } from '@/lib/notificacionesRuta';
 
 function tiempoRelativo(fecha) {
   const diffMs = Date.now() - new Date(fecha).getTime();
@@ -14,7 +16,8 @@ function tiempoRelativo(fecha) {
   return `hace ${dias} d`;
 }
 
-export default function NotificacionesBell({ trabajadorId }) {
+export default function NotificacionesBell({ trabajadorId, esRRHH = false }) {
+  const router = useRouter();
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones(trabajadorId);
   const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
@@ -26,6 +29,13 @@ export default function NotificacionesBell({ trabajadorId }) {
     document.addEventListener('mousedown', onClickFuera);
     return () => document.removeEventListener('mousedown', onClickFuera);
   }, []);
+
+  function abrirNotificacion(n) {
+    marcarLeida(n.id);
+    setAbierto(false);
+    const ruta = rutaDeNotificacion(n, { esRRHH });
+    if (ruta) router.push(ruta);
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -62,7 +72,7 @@ export default function NotificacionesBell({ trabajadorId }) {
             {notificaciones.map((n) => (
               <button
                 key={n.id}
-                onClick={() => marcarLeida(n.id)}
+                onClick={() => abrirNotificacion(n)}
                 className={`w-full text-left px-4 py-3 hover:bg-slate-50 ${
                   n.leida ? '' : 'bg-blue-50/50'
                 }`}

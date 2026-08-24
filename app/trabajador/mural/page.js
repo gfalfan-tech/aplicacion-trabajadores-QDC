@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
@@ -10,7 +11,17 @@ import MuralInteracciones from '@/components/MuralInteracciones';
 const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado: '📰' };
 
 export default function MuralTrabajador() {
+  return (
+    <Suspense fallback={null}>
+      <MuralTrabajadorContenido />
+    </Suspense>
+  );
+}
+
+function MuralTrabajadorContenido() {
   const { perfil } = useAuth();
+  const searchParams = useSearchParams();
+  const postDestacado = searchParams.get('post');
   const [lista, setLista] = useState([]);
   const [ampliadas, setAmpliadas] = useState({});
 
@@ -28,11 +39,25 @@ export default function MuralTrabajador() {
       .then(({ data }) => setLista(data || []));
   }, []);
 
+  useEffect(() => {
+    if (!postDestacado || lista.length === 0) return;
+    const el = document.getElementById(`post-${postDestacado}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [postDestacado, lista]);
+
   return (
     <AppShell links={trabajadorLinks} titulo="Diario mural">
       <div className="space-y-3">
         {lista.map((p) => (
-          <div key={p.id} className="bg-white rounded-xl border border-slate-200 p-4">
+          <div
+            key={p.id}
+            id={`post-${p.id}`}
+            className={`bg-white rounded-xl border p-4 ${
+              postDestacado === p.id ? 'border-[#0F5C8C] ring-2 ring-[#0F5C8C]/30' : 'border-slate-200'
+            }`}
+          >
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center text-lg">
                 {iconos[p.tipo] || '📰'}
@@ -57,7 +82,11 @@ export default function MuralTrabajador() {
                   })}
                 </p>
                 {perfil && (
-                  <MuralInteracciones publicacionId={p.id} trabajadorId={perfil.id} />
+                  <MuralInteracciones
+                    publicacionId={p.id}
+                    trabajadorId={perfil.id}
+                    abrirComentariosInicial={postDestacado === p.id}
+                  />
                 )}
               </div>
             </div>

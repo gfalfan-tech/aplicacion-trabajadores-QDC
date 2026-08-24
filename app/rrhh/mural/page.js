@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
@@ -13,7 +14,17 @@ function hoyISO() {
 }
 
 export default function MuralRRHH() {
+  return (
+    <Suspense fallback={null}>
+      <MuralRRHHContenido />
+    </Suspense>
+  );
+}
+
+function MuralRRHHContenido() {
   const { perfil } = useAuth();
+  const searchParams = useSearchParams();
+  const postDestacado = searchParams.get('post');
   const [lista, setLista] = useState([]);
   const [form, setForm] = useState({
     titulo: '',
@@ -42,6 +53,14 @@ export default function MuralRRHH() {
   useEffect(() => {
     cargar();
   }, []);
+
+  useEffect(() => {
+    if (!postDestacado || lista.length === 0) return;
+    const el = document.getElementById(`post-${postDestacado}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [postDestacado, lista]);
 
   function handleImagen(e) {
     setImagenFile(e.target.files[0] || null);
@@ -158,8 +177,13 @@ export default function MuralRRHH() {
           return (
             <div
               key={p.id}
+              id={`post-${p.id}`}
               className={`bg-white rounded-xl border p-4 ${
-                expirada ? 'border-slate-200 opacity-50' : 'border-slate-200'
+                postDestacado === p.id
+                  ? 'border-[#0F5C8C] ring-2 ring-[#0F5C8C]/30'
+                  : expirada
+                  ? 'border-slate-200 opacity-50'
+                  : 'border-slate-200'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
@@ -184,7 +208,12 @@ export default function MuralRRHH() {
                       : 'Sin fecha de expiración'}
                   </p>
                   {perfil && (
-                    <MuralInteracciones publicacionId={p.id} trabajadorId={perfil.id} puedeModerar />
+                    <MuralInteracciones
+                      publicacionId={p.id}
+                      trabajadorId={perfil.id}
+                      puedeModerar
+                      abrirComentariosInicial={postDestacado === p.id}
+                    />
                   )}
                 </div>
                 <button

@@ -21,10 +21,15 @@ function tiempoRelativo(fecha) {
   return `hace ${dias} d`;
 }
 
-export default function MuralInteracciones({ publicacionId, trabajadorId, puedeModerar = false }) {
+export default function MuralInteracciones({
+  publicacionId,
+  trabajadorId,
+  puedeModerar = false,
+  abrirComentariosInicial = false,
+}) {
   const [reacciones, setReacciones] = useState([]);
   const [comentarios, setComentarios] = useState([]);
-  const [mostrarComentarios, setMostrarComentarios] = useState(false);
+  const [mostrarComentarios, setMostrarComentarios] = useState(abrirComentariosInicial);
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [mostrarSelectorReaccion, setMostrarSelectorReaccion] = useState(false);

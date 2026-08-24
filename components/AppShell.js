@@ -152,7 +152,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
         <div className="hidden md:flex bg-white border-b border-slate-200 px-6 py-3 items-center justify-between sticky top-0 z-10">
           <h1 className="text-lg font-bold text-[#153A5B]">{titulo}</h1>
           <div className="flex items-center gap-3">
-            <NotificacionesBell trabajadorId={perfil.id} />
+            <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
             <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
               {iniciales}
             </div>
@@ -165,7 +165,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
             <span className="text-xs font-bold text-[#153A5B]">{titulo}</span>
           </div>
           <div className="flex items-center gap-2">
-            <NotificacionesBell trabajadorId={perfil.id} />
+            <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
             <div className="w-8 h-8 rounded-full bg-[#153A5B] text-white text-xs font-bold flex items-center justify-center">
               {iniciales}
             </div>
