@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
+import { sanitizeFileName } from '@/lib/sanitizeFileName';
 
 export default function DocumentosRRHH() {
   const { perfil } = useAuth();
@@ -47,7 +48,7 @@ export default function DocumentosRRHH() {
       return;
     }
 
-    const path = `${doc.id}/v1-${archivo.name}`;
+    const path = `${doc.id}/v1-${sanitizeFileName(archivo.name)}`;
     const { error: upErr } = await supabase.storage.from('documentos').upload(path, archivo);
     if (upErr) {
       setMensaje('Error subiendo archivo: ' + upErr.message);

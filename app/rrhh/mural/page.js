@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import MuralInteracciones from '@/components/MuralInteracciones';
+import { sanitizeFileName } from '@/lib/sanitizeFileName';
 
 function hoyISO() {
   return new Date().toISOString().slice(0, 10);
@@ -53,7 +54,7 @@ export default function MuralRRHH() {
 
     let imagen_url = null;
     if (imagenFile) {
-      const nombreArchivo = `${Date.now()}_${imagenFile.name.replace(/\s+/g, '_')}`;
+      const nombreArchivo = `${Date.now()}_${sanitizeFileName(imagenFile.name)}`;
       const { error: errorSubida } = await supabase.storage
         .from('mural')
         .upload(nombreArchivo, imagenFile);
