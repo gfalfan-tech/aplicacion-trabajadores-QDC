@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
@@ -413,6 +414,12 @@ export default function TrabajadoresRRHH() {
                 </p>
               </div>
               <div className="flex gap-2 shrink-0">
+                <Link
+                  href={`/rrhh/trabajadores/${t.id}`}
+                  className="text-xs font-bold text-[#153A5B] bg-slate-100 rounded-lg px-3 py-2"
+                >
+                  Ver perfil
+                </Link>
                 <button
                   onClick={() => (editandoId === t.id ? cerrarEdicion() : abrirEdicion(t))}
                   className="text-xs font-bold text-[#0F5C8C] border border-slate-200 rounded-lg px-3 py-2"
