@@ -17,6 +17,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   const router = useRouter();
   const { session, perfil, esRRHH, cargando } = useAuth();
   const [colapsado, setColapsado] = useState(false);
+  const [mostrarMas, setMostrarMas] = useState(false);
   const { totalNoLeidos } = useConversaciones(perfil?.id);
 
   useEffect(() => {
@@ -35,6 +36,11 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
     } else if (pathname.startsWith('/trabajador')) {
       window.localStorage.setItem(CLAVE_ULTIMA_VISTA, 'trabajador');
     }
+  }, [pathname]);
+
+  // Cierra la hoja de "Más" al navegar a otra pantalla.
+  useEffect(() => {
+    setMostrarMas(false);
   }, [pathname]);
 
   function toggleColapsado() {
@@ -89,6 +95,14 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   const otraVista = pathname.startsWith('/rrhh')
     ? { href: '/trabajador', label: 'Ir a vista trabajador' }
     : { href: '/rrhh', label: 'Ir a panel RR.HH.' };
+
+  // La barra inferior del celular solo tiene espacio cómodo para unos
+  // pocos accesos. Si hay más de 5 (como pasa desde que agregamos
+  // "Mensajes"), los primeros 4 quedan fijos y el resto — incluyendo
+  // Documentos, Mural o Perfil, que antes quedaban totalmente
+  // inalcanzables en el celular — se mueve a la hoja de "Más".
+  const linksVisiblesMovil = links.length > 5 ? links.slice(0, 4) : links;
+  const linksResto = links.length > 5 ? links.slice(4) : [];
 
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
@@ -205,7 +219,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
       </div>
 
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 flex justify-around py-2 z-10">
-        {links.slice(0, 5).map((l) => (
+        {linksVisiblesMovil.map((l) => (
           <Link
             key={l.href}
             href={l.href}
@@ -224,7 +238,60 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
             {l.label}
           </Link>
         ))}
+        {linksResto.length > 0 && (
+          <button
+            onClick={() => setMostrarMas(true)}
+            className={`flex flex-col items-center text-[10px] gap-1 ${
+              linksResto.some((l) => l.href === pathname) ? 'text-[#0F5C8C] font-bold' : 'text-slate-400'
+            }`}
+          >
+            <span className="text-lg">⋯</span>
+            Más
+          </button>
+        )}
       </nav>
+
+      {/* Hoja con el resto de los accesos que no caben en la barra inferior */}
+      {mostrarMas && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-30 flex items-end"
+          onClick={() => setMostrarMas(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full rounded-t-2xl pb-6 pt-2 max-h-[70vh] overflow-y-auto"
+          >
+            <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-2" />
+            {linksResto.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMostrarMas(false)}
+                className={`flex items-center gap-3 px-5 py-3 text-sm font-medium relative ${
+                  pathname === l.href ? 'text-[#0F5C8C] font-bold' : 'text-slate-600'
+                }`}
+              >
+                <span className="relative text-lg">
+                  {l.icon}
+                  {l.href === '/mensajes' && totalNoLeidos > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                      {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
+                    </span>
+                  )}
+                </span>
+                {l.label}
+              </Link>
+            ))}
+            <button
+              onClick={salir}
+              className="w-full flex items-center gap-3 px-5 py-3 text-sm font-medium text-red-600 text-left"
+            >
+              <span className="text-lg">⏻</span>
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
