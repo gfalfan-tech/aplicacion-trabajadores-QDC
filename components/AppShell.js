@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import NotificacionesBell from '@/components/NotificacionesBell';
+import { useConversaciones } from '@/lib/useConversaciones';
 
 const CLAVE_COLAPSADO = 'qdc_menu_colapsado';
 
@@ -14,6 +15,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   const router = useRouter();
   const { session, perfil, esRRHH, cargando } = useAuth();
   const [colapsado, setColapsado] = useState(false);
+  const { totalNoLeidos } = useConversaciones(perfil?.id);
 
   useEffect(() => {
     const guardado = window.localStorage.getItem(CLAVE_COLAPSADO);
@@ -101,7 +103,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
               key={l.href}
               href={l.href}
               title={colapsado ? l.label : undefined}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium relative ${
                 colapsado ? 'justify-center' : ''
               } ${
                 pathname === l.href
@@ -109,7 +111,14 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <span>{l.icon}</span>
+              <span className="relative">
+                {l.icon}
+                {l.href === '/mensajes' && totalNoLeidos > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                    {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
+                  </span>
+                )}
+              </span>
               {!colapsado && l.label}
             </Link>
           ))}
@@ -184,7 +193,14 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
               pathname === l.href ? 'text-[#0F5C8C] font-bold' : 'text-slate-400'
             }`}
           >
-            <span className="text-lg">{l.icon}</span>
+            <span className="relative text-lg">
+              {l.icon}
+              {l.href === '/mensajes' && totalNoLeidos > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                  {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
+                </span>
+              )}
+            </span>
             {l.label}
           </Link>
         ))}
