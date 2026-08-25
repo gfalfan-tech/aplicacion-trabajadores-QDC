@@ -6,11 +6,16 @@ import { useAuth } from '@/lib/useAuth';
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
+import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
+import { obtenerTraslapes, resolverSolicitudVacaciones } from '@/lib/vacacionesEquipo';
 
 export default function RRHHHome() {
   const { perfil } = useAuth();
   const [kpi, setKpi] = useState({ activos: 0, permisosPend: 0, vacacionesPend: 0 });
   const [pendientes, setPendientes] = useState([]);
+  const [confirmando, setConfirmando] = useState(null);
+  const [traslapes, setTraslapes] = useState(null);
+  const [resolviendo, setResolviendo] = useState(false);
 
   async function cargar() {
     const { count: activos } = await supabase
@@ -47,12 +52,45 @@ export default function RRHHHome() {
   }, []);
 
   async function resolver(item, estado) {
-    const tabla = item.origen === 'permiso' ? 'solicitudes_permiso' : 'solicitudes_vacaciones';
-    await supabase
-      .from(tabla)
-      .update({ estado, aprobado_por: perfil.id, fecha_resolucion: new Date().toISOString() })
-      .eq('id', item.id);
-    cargar();
+    if (item.origen === 'permiso') {
+      await supabase
+        .from('solicitudes_permiso')
+        .update({ estado, aprobado_por: perfil.id, fecha_resolucion: new Date().toISOString() })
+        .eq('id', item.id);
+      cargar();
+      return;
+    }
+
+    // Vacaciones: si es una aprobación, primero se revisa si hay gente de
+    // la misma área con fechas cruzadas, para avisar antes de confirmar.
+    if (estado === 'aprobada') {
+      setConfirmando(item);
+      setTraslapes(null);
+      try {
+        const t = await obtenerTraslapes(item.id);
+        setTraslapes(t);
+        if (t.length === 0) {
+          await confirmarVacaciones(item, 'aprobada');
+        }
+      } catch (err) {
+        setConfirmando(null);
+      }
+      return;
+    }
+
+    await confirmarVacaciones(item, estado);
+  }
+
+  async function confirmarVacaciones(item, estado) {
+    setResolviendo(true);
+    try {
+      await resolverSolicitudVacaciones(item.id, estado);
+      setConfirmando(null);
+      setTraslapes(null);
+      cargar();
+    } finally {
+      setResolviendo(false);
+    }
   }
 
   return (
@@ -98,6 +136,14 @@ export default function RRHHHome() {
           <p className="text-sm font-bold text-[#153A5B]">Informes</p>
           <p className="text-xs text-slate-500 mt-0.5">Emitir por período</p>
         </Link>
+        <Link
+          href="/rrhh/vacaciones-calendario"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
+        >
+          <p className="text-2xl mb-2">🏖️</p>
+          <p className="text-sm font-bold text-[#153A5B]">Vacaciones</p>
+          <p className="text-xs text-slate-500 mt-0.5">Calendario del equipo</p>
+        </Link>
       </div>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PENDIENTES DE RR.HH.</p>
@@ -138,6 +184,18 @@ export default function RRHHHome() {
           </div>
         ))}
       </div>
+
+      {confirmando && traslapes && traslapes.length > 0 && (
+        <ModalTraslapeVacaciones
+          traslapes={traslapes}
+          confirmando={resolviendo}
+          onCancelar={() => {
+            setConfirmando(null);
+            setTraslapes(null);
+          }}
+          onConfirmar={() => confirmarVacaciones(confirmando, 'aprobada')}
+        />
+      )}
     </AppShell>
   );
 }
