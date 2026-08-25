@@ -81,7 +81,9 @@ export default function AsistenciaRRHH() {
         Sube cada mes el "Reporte de asistencia simplificado" que exporta el sistema de marcaje (un
         archivo .xls con una hoja por trabajador). La app toma de ahí, para cada trabajador, los días
         de inasistencia y los minutos de atraso del período — ya calculados respetando el horario real
-        de cada uno — y los muestra en su perfil.
+        de cada uno — y los muestra en su perfil. Como respaldo, si alguna inasistencia del reporte
+        cae en fechas con vacaciones ya aprobadas en la app, se descuenta automáticamente (por si el
+        sistema de marcaje no quedó bien sincronizado con esas vacaciones).
       </p>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -116,6 +118,14 @@ export default function AsistenciaRRHH() {
                   <p className="text-xs text-slate-500">
                     {a.periodo_desde} → {a.periodo_hasta}
                   </p>
+                  {a.fechas_ajustadas_por_vacaciones?.length > 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Se descontaron {a.fechas_ajustadas_por_vacaciones.length} inasistencia(s) del
+                      reporte ({a.fechas_ajustadas_por_vacaciones.join(', ')}) por coincidir con
+                      vacaciones ya aprobadas en la app — el archivo traía{' '}
+                      {a.dias_inasistencia_original}.
+                    </p>
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 text-right shrink-0">
                   {a.dias_inasistencia} inasist. · {formatearMinutos(a.atraso_minutos)} atraso

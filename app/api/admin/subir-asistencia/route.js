@@ -83,12 +83,36 @@ export async function POST(req) {
       continue;
     }
 
+    // Respaldo: si alguna de las fechas que parecen inasistencia cae dentro
+    // de unas vacaciones YA aprobadas en la app para este trabajador, se
+    // descuenta de las inasistencias del período — por si el sistema de
+    // marcaje no quedó bien sincronizado con esas vacaciones. Nunca se
+    // descuenta más de lo que el propio archivo reportó como inasistencias.
+    let diasInasistencia = fila.dias_inasistencia;
+    let fechasAjustadas = [];
+    if (fila.fechas_inasistencia?.length && diasInasistencia > 0) {
+      const { data: vacacionesAprobadas } = await admin
+        .from('solicitudes_vacaciones')
+        .select('fecha_desde, fecha_hasta')
+        .eq('trabajador_id', trabajador.id)
+        .eq('estado', 'aprobada')
+        .lte('fecha_desde', fila.periodo_hasta)
+        .gte('fecha_hasta', fila.periodo_desde);
+
+      fechasAjustadas = fila.fechas_inasistencia.filter((f) =>
+        (vacacionesAprobadas || []).some((v) => f >= v.fecha_desde && f <= v.fecha_hasta)
+      );
+      if (fechasAjustadas.length) {
+        diasInasistencia = Math.max(0, diasInasistencia - fechasAjustadas.length);
+      }
+    }
+
     const { error } = await admin.from('asistencia_mensual').upsert(
       {
         trabajador_id: trabajador.id,
         periodo_desde: fila.periodo_desde,
         periodo_hasta: fila.periodo_hasta,
-        dias_inasistencia: fila.dias_inasistencia,
+        dias_inasistencia: diasInasistencia,
         atraso_minutos: fila.atraso_minutos,
         cantidad_atrasos: fila.cantidad_atrasos,
         salidas_anticipadas_cantidad: fila.salidas_anticipadas_cantidad,
@@ -106,7 +130,9 @@ export async function POST(req) {
         rut: trabajador.rut,
         periodo_desde: fila.periodo_desde,
         periodo_hasta: fila.periodo_hasta,
-        dias_inasistencia: fila.dias_inasistencia,
+        dias_inasistencia: diasInasistencia,
+        dias_inasistencia_original: fila.dias_inasistencia,
+        fechas_ajustadas_por_vacaciones: fechasAjustadas,
         atraso_minutos: fila.atraso_minutos,
       });
     }
