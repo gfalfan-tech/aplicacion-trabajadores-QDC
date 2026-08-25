@@ -171,8 +171,10 @@ export default function VerPerfilTrabajador() {
               )}
             </div>
             <div className="px-4 sm:px-6">
-              <div className="-mt-10 sm:-mt-12 inline-block rounded-full ring-4 ring-white bg-white">
-                <Avatar url={trabajador.avatar_url} nombre={trabajador.nombre_completo} size={80} />
+              <div className="relative -mt-10 sm:-mt-12 inline-block">
+                <div className="rounded-full ring-4 ring-white bg-white">
+                  <Avatar url={trabajador.avatar_url} nombre={trabajador.nombre_completo} size={80} />
+                </div>
               </div>
               <div className="flex items-center justify-between mb-1 pt-2">
                 <p className="text-base font-bold text-[#153A5B]">{trabajador.nombre_completo}</p>
