@@ -72,12 +72,20 @@ export default function RRHHHome() {
         </div>
       </div>
 
-      <Link
-        href="/rrhh/feriados"
-        className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2 mb-6"
-      >
-        📅 Administrar feriados
-      </Link>
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Link
+          href="/rrhh/feriados"
+          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+        >
+          📅 Administrar feriados
+        </Link>
+        <Link
+          href="/rrhh/asistencia"
+          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+        >
+          📊 Subir asistencia mensual
+        </Link>
+      </div>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PENDIENTES DE RR.HH.</p>
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">

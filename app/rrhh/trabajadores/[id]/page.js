@@ -8,6 +8,7 @@ import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import { generarPdfPermiso, generarPdfVacaciones } from '@/lib/solicitudPdf';
 import Avatar from '@/components/Avatar';
+import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -37,6 +38,7 @@ export default function VerPerfilTrabajador() {
   const [vacaciones, setVacaciones] = useState([]);
   const [certificados, setCertificados] = useState([]);
   const [documentos, setDocumentos] = useState([]);
+  const [asistencia, setAsistencia] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
 
@@ -116,6 +118,11 @@ export default function VerPerfilTrabajador() {
         });
       }
       if (activo) setDocumentos(docsConLectura);
+
+      if (t.registra_asistencia === 'SI') {
+        const asis = await obtenerAsistenciaMesActual(id);
+        if (activo) setAsistencia(asis);
+      }
 
       setCargando(false);
     }
@@ -200,6 +207,30 @@ export default function VerPerfilTrabajador() {
               ))}
             </div>
           </div>
+
+          {trabajador.registra_asistencia === 'SI' && asistencia && (
+            <div>
+              <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
+                ASISTENCIA {asistencia.esMesActual ? 'DE ESTE MES' : ''}
+              </p>
+              <div className="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <p className="text-xl font-bold text-[#153A5B]">{asistencia.dias_inasistencia}</p>
+                  <p className="text-[10px] text-slate-500">Días de inasistencia</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-[#153A5B]">
+                    {formatearMinutosAtraso(asistencia.atraso_minutos)}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Minutos de atraso</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                Período {asistencia.periodo_desde} → {asistencia.periodo_hasta}
+                {!asistencia.esMesActual && ' (último reporte cargado por RR.HH.)'}
+              </p>
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">VACACIONES</p>

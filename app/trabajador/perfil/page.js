@@ -1,18 +1,25 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import { subirFotoPerfil } from '@/lib/subirFotoPerfil';
+import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 
 export default function Perfil() {
   const { perfil, recargarPerfil } = useAuth();
   const [subiendo, setSubiendo] = useState(null); // 'avatar' | 'banner' | null
   const [mensaje, setMensaje] = useState('');
+  const [asistencia, setAsistencia] = useState(null);
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!perfil || perfil.registra_asistencia !== 'SI') return;
+    obtenerAsistenciaMesActual(perfil.id).then(setAsistencia);
+  }, [perfil?.id, perfil?.registra_asistencia]);
 
   if (!perfil) return null;
 
@@ -96,6 +103,30 @@ export default function Perfil() {
       </div>
 
       {mensaje && <p className="text-xs text-red-600 mb-3">{mensaje}</p>}
+
+      {perfil.registra_asistencia === 'SI' && asistencia && (
+        <>
+          <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
+            ASISTENCIA {asistencia.esMesActual ? 'DE ESTE MES' : ''}
+          </p>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 grid grid-cols-2 gap-3 text-center">
+            <div>
+              <p className="text-xl font-bold text-[#153A5B]">{asistencia.dias_inasistencia}</p>
+              <p className="text-[10px] text-slate-500">Días de inasistencia</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-[#153A5B]">
+                {formatearMinutosAtraso(asistencia.atraso_minutos)}
+              </p>
+              <p className="text-[10px] text-slate-500">Minutos de atraso</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 mb-4">
+            Período {asistencia.periodo_desde} → {asistencia.periodo_hasta}
+            {!asistencia.esMesActual && ' (último reporte cargado por RR.HH.)'}
+          </p>
+        </>
+      )}
 
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {campos.map(([label, valor]) => (
