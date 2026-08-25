@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
+import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 
@@ -56,7 +57,7 @@ export default function RRHHHome() {
 
   return (
     <AppShell links={rrhhLinks} titulo="Panel de RR.HH." requiereRRHH>
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
           <p className="text-xl font-bold text-[#153A5B]">{kpi.activos}</p>
           <p className="text-[10px] text-slate-500">Trabajadores activos</p>
@@ -70,6 +71,13 @@ export default function RRHHHome() {
           <p className="text-[10px] text-slate-500">Vacaciones pendientes</p>
         </div>
       </div>
+
+      <Link
+        href="/rrhh/feriados"
+        className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2 mb-6"
+      >
+        📅 Administrar feriados
+      </Link>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PENDIENTES DE RR.HH.</p>
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">

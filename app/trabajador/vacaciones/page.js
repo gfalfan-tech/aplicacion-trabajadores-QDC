@@ -6,18 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import { generarPdfVacaciones } from '@/lib/solicitudPdf';
-
-function diasHabiles(desde, hasta) {
-  let d = new Date(desde);
-  const fin = new Date(hasta);
-  let n = 0;
-  while (d <= fin) {
-    const dia = d.getDay();
-    if (dia !== 0 && dia !== 6) n++;
-    d.setDate(d.getDate() + 1);
-  }
-  return n;
-}
+import { calcularDiasHabiles } from '@/lib/diasHabiles';
 
 const estadoStyle = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -33,6 +22,21 @@ export default function Vacaciones() {
   const [form, setForm] = useState({ fecha_desde: '', fecha_hasta: '' });
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [previewDias, setPreviewDias] = useState(null);
+
+  useEffect(() => {
+    if (!form.fecha_desde || !form.fecha_hasta || form.fecha_hasta < form.fecha_desde) {
+      setPreviewDias(null);
+      return;
+    }
+    let vigente = true;
+    calcularDiasHabiles(form.fecha_desde, form.fecha_hasta).then((n) => {
+      if (vigente) setPreviewDias(n);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [form.fecha_desde, form.fecha_hasta]);
 
   async function cargar() {
     const { data: s } = await supabase
@@ -57,7 +61,7 @@ export default function Vacaciones() {
     e.preventDefault();
     setEnviando(true);
     setMensaje('');
-    const dias = diasHabiles(form.fecha_desde, form.fecha_hasta);
+    const dias = await calcularDiasHabiles(form.fecha_desde, form.fecha_hasta);
     const { data, error } = await supabase
       .from('solicitudes_vacaciones')
       .insert({
@@ -128,6 +132,12 @@ export default function Vacaciones() {
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm"
           />
         </div>
+        {previewDias !== null && (
+          <p className="text-xs text-slate-500">
+            Esto descuenta <span className="font-bold text-[#153A5B]">{previewDias} días hábiles</span> (de
+            lunes a viernes, sin contar feriados).
+          </p>
+        )}
         <button
           disabled={enviando}
           className="w-full bg-[#153A5B] text-white font-bold rounded-lg py-2 text-sm"
