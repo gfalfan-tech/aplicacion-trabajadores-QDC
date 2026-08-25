@@ -72,24 +72,31 @@ export default function RRHHHome() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">GESTIÓN</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         <Link
           href="/rrhh/feriados"
-          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
         >
-          📅 Administrar feriados
+          <p className="text-2xl mb-2">📅</p>
+          <p className="text-sm font-bold text-[#153A5B]">Feriados</p>
+          <p className="text-xs text-slate-500 mt-0.5">Administrar</p>
         </Link>
         <Link
           href="/rrhh/asistencia"
-          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
         >
-          📊 Subir asistencia mensual
+          <p className="text-2xl mb-2">📊</p>
+          <p className="text-sm font-bold text-[#153A5B]">Asistencia</p>
+          <p className="text-xs text-slate-500 mt-0.5">Subir reporte mensual</p>
         </Link>
         <Link
           href="/rrhh/informes"
-          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
         >
-          🧾 Emitir informe
+          <p className="text-2xl mb-2">🧾</p>
+          <p className="text-sm font-bold text-[#153A5B]">Informes</p>
+          <p className="text-xs text-slate-500 mt-0.5">Emitir por período</p>
         </Link>
       </div>
 
