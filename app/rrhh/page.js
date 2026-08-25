@@ -111,7 +111,7 @@ export default function RRHHHome() {
       </div>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">GESTIÓN</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Link
           href="/rrhh/feriados"
           className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"

@@ -215,7 +215,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
           </div>
         </div>
 
-        <main className="max-w-3xl mx-auto p-4 md:p-8">{children}</main>
+        <main className="max-w-3xl md:max-w-4xl lg:max-w-6xl mx-auto p-4 md:p-8">{children}</main>
       </div>
 
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 flex justify-around py-2 z-10">
