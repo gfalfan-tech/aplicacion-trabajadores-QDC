@@ -7,12 +7,22 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import { subirFotoPerfil } from '@/lib/subirFotoPerfil';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
+import {
+  pushDisponible,
+  permisoActual,
+  suscripcionActiva,
+  activarNotificacionesPush,
+  desactivarNotificacionesPush,
+} from '@/lib/pushNotificaciones';
 
 export default function Perfil() {
   const { perfil, recargarPerfil } = useAuth();
   const [subiendo, setSubiendo] = useState(null); // 'avatar' | 'banner' | null
   const [mensaje, setMensaje] = useState('');
   const [asistencia, setAsistencia] = useState(null);
+  const [pushActivo, setPushActivo] = useState(false);
+  const [pushCargando, setPushCargando] = useState(false);
+  const [pushError, setPushError] = useState('');
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
 
@@ -20,6 +30,29 @@ export default function Perfil() {
     if (!perfil || perfil.registra_asistencia !== 'SI') return;
     obtenerAsistenciaMesActual(perfil.id).then(setAsistencia);
   }, [perfil?.id, perfil?.registra_asistencia]);
+
+  useEffect(() => {
+    if (!pushDisponible()) return;
+    suscripcionActiva().then(setPushActivo);
+  }, []);
+
+  async function alternarPush() {
+    setPushCargando(true);
+    setPushError('');
+    try {
+      if (pushActivo) {
+        await desactivarNotificacionesPush();
+        setPushActivo(false);
+      } else {
+        await activarNotificacionesPush();
+        setPushActivo(true);
+      }
+    } catch (err) {
+      setPushError(err.message);
+    } finally {
+      setPushCargando(false);
+    }
+  }
 
   if (!perfil) return null;
 
@@ -126,6 +159,37 @@ export default function Perfil() {
             {!asistencia.esMesActual && ' (último reporte cargado por RR.HH.)'}
           </p>
         </>
+      )}
+
+      {pushDisponible() && (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-[#153A5B]">🔔 Notificaciones en este dispositivo</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {pushActivo
+                ? 'Recibirás avisos aunque tengas la app cerrada.'
+                : 'Actívalas para recibir avisos aunque tengas la app cerrada.'}
+            </p>
+            {permisoActual() === 'denied' && (
+              <p className="text-xs text-red-600 mt-1">
+                Bloqueaste las notificaciones en tu navegador. Debes habilitarlas manualmente en su
+                configuración de sitio para poder activarlas aquí.
+              </p>
+            )}
+            {pushError && <p className="text-xs text-red-600 mt-1">{pushError}</p>}
+          </div>
+          <button
+            onClick={alternarPush}
+            disabled={pushCargando}
+            className={`shrink-0 text-xs font-bold rounded-lg px-3 py-2 disabled:opacity-60 ${
+              pushActivo
+                ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-[#0F5C8C] text-white hover:bg-[#153A5B]'
+            }`}
+          >
+            {pushCargando ? '...' : pushActivo ? 'Desactivar' : 'Activar'}
+          </button>
+        </div>
       )}
 
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
