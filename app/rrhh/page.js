@@ -85,6 +85,12 @@ export default function RRHHHome() {
         >
           📊 Subir asistencia mensual
         </Link>
+        <Link
+          href="/rrhh/informes"
+          className="inline-block text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+        >
+          🧾 Emitir informe
+        </Link>
       </div>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PENDIENTES DE RR.HH.</p>
