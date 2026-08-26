@@ -210,24 +210,24 @@ export default function TrabajadoresRRHH() {
       return;
     }
 
-    const { error: delError } = await supabase
-      .from('trabajador_roles')
-      .delete()
-      .eq('trabajador_id', editandoId);
-    if (delError) {
+    // Los roles se actualizan por una ruta de servidor (no directo desde
+    // el navegador) — así, si estás editando TU PROPIO perfil y te sacas
+    // momentáneamente el rol rrhh/administrador a mitad del reemplazo, el
+    // guardado no queda a medio camino ni te deja sin acceso: la ruta usa
+    // la llave de servicio, que no depende de la RLS que sí exige tener
+    // ese rol en el momento exacto de cada operación.
+    const { data: sesionRoles } = await supabase.auth.getSession();
+    const tokenRoles = sesionRoles?.session?.access_token;
+    const resRoles = await fetch('/api/admin/actualizar-roles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRoles}` },
+      body: JSON.stringify({ trabajador_id: editandoId, roles: editForm.roles }),
+    });
+    if (!resRoles.ok) {
+      const dataRoles = await resRoles.json().catch(() => ({}));
       setGuardandoEdicion(false);
-      setMensaje('Error al actualizar roles: ' + delError.message);
+      setMensaje('Error al actualizar roles: ' + (dataRoles.error || 'Error desconocido'));
       return;
-    }
-    if (editForm.roles.length) {
-      const { error: rolError } = await supabase
-        .from('trabajador_roles')
-        .insert(editForm.roles.map((r) => ({ trabajador_id: editandoId, rol: r })));
-      if (rolError) {
-        setGuardandoEdicion(false);
-        setMensaje('Error al actualizar roles: ' + rolError.message);
-        return;
-      }
     }
 
     const resVacaciones = await fetch('/api/admin/actualizar-vacaciones', {
