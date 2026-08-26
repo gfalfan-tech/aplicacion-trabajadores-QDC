@@ -32,7 +32,16 @@ export async function POST(req) {
     return NextResponse.json({ error: 'La clave debe tener al menos 6 caracteres.' }, { status: 400 });
   }
 
-  const { error } = await auth.admin.auth.admin.updateUserById(trabajadorId, { password: clave });
+  // email_confirm: true es clave acá — como RR.HH. está asignando la clave
+  // directamente (sin pasar por el link de invitación por correo, que es
+  // lo que normalmente confirma la cuenta), si no confirmamos el correo en
+  // este mismo paso el trabajador queda con clave pero sin poder entrar
+  // ("Email not confirmed"). RR.HH. asignando la clave a mano es garantía
+  // suficiente de que la cuenta es legítima.
+  const { error } = await auth.admin.auth.admin.updateUserById(trabajadorId, {
+    password: clave,
+    email_confirm: true,
+  });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
