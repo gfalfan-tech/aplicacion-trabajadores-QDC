@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { recargarCajaChica } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
+import { generarPdfInformeCajaChica } from '@/lib/informeCajaChicaPdf';
 
 const ETIQUETA_TIPO = { factura: 'Factura', boleta: 'Boleta', vale_por: 'Vale por' };
 
@@ -20,6 +21,18 @@ export default function ModalReporteCajaChica({ reporte, onCerrar, onRecargado }
   const [notas, setNotas] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [descargandoPdf, setDescargandoPdf] = useState(false);
+
+  async function descargarPdf() {
+    setDescargandoPdf(true);
+    try {
+      await generarPdfInformeCajaChica(reporte);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDescargandoPdf(false);
+    }
+  }
 
   const comprobantesPorTipo = { factura: [], boleta: [], vale_por: [] };
   (reporte.solicitudes || []).forEach((s) => {
@@ -61,6 +74,14 @@ export default function ModalReporteCajaChica({ reporte, onCerrar, onRecargado }
             <p className="text-sm text-slate-400 py-6 text-center">Aún no hay un fondo de caja chica abierto.</p>
           ) : (
             <>
+              <button
+                onClick={descargarPdf}
+                disabled={descargandoPdf}
+                className="w-full text-sm font-bold text-white bg-[#153A5B] hover:bg-[#0F5C8C] rounded-lg py-2.5 disabled:opacity-60"
+              >
+                {descargandoPdf ? 'Generando…' : '📄 Descargar informe PDF (para Gerencia)'}
+              </button>
+
               <div className="bg-slate-50 rounded-lg p-3">
                 <p className="text-xs text-slate-500">
                   Saldo inicial del período — {formatearFecha(reporte.periodo.fecha_inicio)}
