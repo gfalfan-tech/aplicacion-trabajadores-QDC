@@ -7,6 +7,7 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
+import AlertaPendientes from '@/components/AlertaPendientes';
 import { obtenerTraslapes, resolverSolicitudVacaciones } from '@/lib/vacacionesEquipo';
 
 export default function RRHHHome() {
@@ -95,6 +96,15 @@ export default function RRHHHome() {
 
   return (
     <AppShell links={rrhhLinks} titulo="Panel de RR.HH." requiereRRHH>
+      <AlertaPendientes
+        enlaces={{
+          certificados: '/rrhh/certificados',
+          vacaciones: '/rrhh#pendientes-rrhh',
+          permisos: '/rrhh#pendientes-rrhh',
+          cajaChica: '/rrhh/caja-chica',
+        }}
+      />
+
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
           <p className="text-xl font-bold text-[#153A5B]">{kpi.activos}</p>
@@ -154,7 +164,9 @@ export default function RRHHHome() {
         </Link>
       </div>
 
-      <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PENDIENTES DE RR.HH.</p>
+      <p id="pendientes-rrhh" className="text-xs font-bold text-slate-400 tracking-wide mb-2">
+        PENDIENTES DE RR.HH.
+      </p>
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {pendientes.length === 0 && (
           <p className="text-sm text-slate-400 p-4">No hay solicitudes pendientes.</p>

@@ -86,6 +86,15 @@ export async function POST(req) {
     destinatarios = (respaldoData || []).map((r) => r.trabajador_id);
   }
 
+  // RR.HH./administrador siempre se entera, exista o no un aprobador
+  // directo — así puede hacer seguimiento y aprobar si hace falta.
+  const idsRRHH = Array.from(rolesPorTrabajador.entries())
+    .filter(([, roles]) => roles.includes('rrhh') || roles.includes('administrador'))
+    .map(([id]) => id);
+  for (const id of idsRRHH) {
+    if (!destinatarios.includes(id)) destinatarios.push(id);
+  }
+
   if (destinatarios.length) {
     await admin.from('notificaciones').insert(
       destinatarios.map((id) => ({

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
+import AlertaPendientes from '@/components/AlertaPendientes';
 
 const MESES_CORTOS = [
   'ene',
@@ -79,6 +80,16 @@ export default function TrabajadorHome() {
       <p className="text-sm text-slate-500 mb-6 capitalize">
         {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
+
+      {(esJefatura || esRRHH) && (
+        <AlertaPendientes
+          enlaces={{
+            vacaciones: '/trabajador/equipo',
+            permisos: '/trabajador/equipo',
+            cajaChica: esJefatura || esRRHH ? '/trabajador/caja-chica' : null,
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">

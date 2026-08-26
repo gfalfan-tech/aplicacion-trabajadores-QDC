@@ -27,7 +27,10 @@ function formatFechaPermiso(fechaISO) {
 }
 
 export default function MiEquipo() {
-  const { perfil, esJefatura } = useAuth();
+  const { perfil, esJefatura, esRRHH } = useAuth();
+  // RR.HH. también puede ver y aprobar — de toda la empresa, no solo de un
+  // equipo propio (los endpoints de abajo ya devuelven todo cuando esRRHH).
+  const puedeVer = esJefatura || esRRHH;
   const [equipo, setEquipo] = useState(null);
   const [mes, setMes] = useState(mesActualISO());
   const [calendario, setCalendario] = useState(null);
@@ -68,7 +71,7 @@ export default function MiEquipo() {
   }, [perfil?.id]);
 
   useEffect(() => {
-    if (!perfil || !esJefatura) return;
+    if (!perfil || !puedeVer) return;
     let activo = true;
     setErrorCalendario('');
     obtenerCalendarioVacaciones(mes)
@@ -81,7 +84,7 @@ export default function MiEquipo() {
     return () => {
       activo = false;
     };
-  }, [perfil?.id, esJefatura, mes]);
+  }, [perfil?.id, puedeVer, mes]);
 
   async function cargarPermisos() {
     try {
@@ -93,9 +96,9 @@ export default function MiEquipo() {
   }
 
   useEffect(() => {
-    if (!perfil || !esJefatura) return;
+    if (!perfil || !puedeVer) return;
     cargarPermisos();
-  }, [perfil?.id, esJefatura]);
+  }, [perfil?.id, puedeVer]);
 
   async function resolverPermiso(solicitud, estado) {
     setResolviendoPermisoId(solicitud.id);
@@ -147,54 +150,64 @@ export default function MiEquipo() {
   const pendientes = (calendario?.solicitudes || []).filter((s) => s.estado === 'pendiente');
 
   return (
-    <AppShell links={trabajadorLinks} titulo="Mi equipo">
-      {!esJefatura && (
-        <p className="text-sm text-slate-400">Esta sección es solo para jefaturas.</p>
+    <AppShell links={trabajadorLinks} titulo={esRRHH && !esJefatura ? 'Aprobaciones' : 'Mi equipo'}>
+      {!puedeVer && (
+        <p className="text-sm text-slate-400">Esta sección es solo para jefaturas y RR.HH.</p>
       )}
 
-      {esJefatura && (
+      {puedeVer && (
         <>
-          <p className="text-xs text-slate-500 mb-4">
-            Asistencia del mes en curso de las personas que te tienen como jefe directo.
-          </p>
-          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
-            {equipo === null && <p className="text-sm text-slate-400 p-4">Cargando…</p>}
-            {equipo?.length === 0 && (
-              <p className="text-sm text-slate-400 p-4">No tienes a nadie a cargo en este momento.</p>
-            )}
-            {equipo?.map((p) => {
-              const clicable = p.registra_asistencia === 'SI' && p.asistencia;
-              return (
-                <div
-                  key={p.id}
-                  onClick={clicable ? () => setDetalleSeleccionado(p) : undefined}
-                  className={`flex items-center justify-between px-4 py-3 gap-3 ${
-                    clicable ? 'cursor-pointer hover:bg-slate-50' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar url={p.avatar_url} nombre={p.nombre_completo} size={36} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-[#153A5B] truncate">{p.nombre_completo}</p>
-                      <p className="text-xs text-slate-500 truncate">{p.cargo || 'Sin cargo'}</p>
+          {esRRHH && (
+            <p className="text-xs text-slate-500 mb-4">
+              Como RR.HH. ves las solicitudes de vacaciones y permisos de toda la empresa, no solo de
+              un equipo propio.
+            </p>
+          )}
+          {esJefatura && (
+            <>
+              <p className="text-xs text-slate-500 mb-4">
+                Asistencia del mes en curso de las personas que te tienen como jefe directo.
+              </p>
+              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
+                {equipo === null && <p className="text-sm text-slate-400 p-4">Cargando…</p>}
+                {equipo?.length === 0 && (
+                  <p className="text-sm text-slate-400 p-4">No tienes a nadie a cargo en este momento.</p>
+                )}
+                {equipo?.map((p) => {
+                  const clicable = p.registra_asistencia === 'SI' && p.asistencia;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={clicable ? () => setDetalleSeleccionado(p) : undefined}
+                      className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                        clicable ? 'cursor-pointer hover:bg-slate-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar url={p.avatar_url} nombre={p.nombre_completo} size={36} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-[#153A5B] truncate">{p.nombre_completo}</p>
+                          <p className="text-xs text-slate-500 truncate">{p.cargo || 'Sin cargo'}</p>
+                        </div>
+                      </div>
+                      {clicable ? (
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <p className="text-xs text-slate-500 text-right">
+                            {p.asistencia.dias_inasistencia} inasist.
+                            <br />
+                            {formatearMinutosAtraso(p.asistencia.atraso_minutos)} atraso
+                          </p>
+                          <span className="text-slate-300">›</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-300 shrink-0">No aplica</p>
+                      )}
                     </div>
-                  </div>
-                  {clicable ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <p className="text-xs text-slate-500 text-right">
-                        {p.asistencia.dias_inasistencia} inasist.
-                        <br />
-                        {formatearMinutosAtraso(p.asistencia.atraso_minutos)} atraso
-                      </p>
-                      <span className="text-slate-300">›</span>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-300 shrink-0">No aplica</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
             DÍAS DE VACACIONES DISPONIBLES
