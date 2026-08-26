@@ -31,6 +31,8 @@ select
   t.nombre_completo,
   t.cargo,
   t.avatar_url,
+  t.banner_url,
+  t.fecha_ingreso,
   a.nombre as area_nombre,
   t.jefe_directo_id,
   j.nombre_completo as jefe_nombre
