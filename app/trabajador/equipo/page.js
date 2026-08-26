@@ -12,6 +12,7 @@ import ModalDetalleAsistencia from '@/components/ModalDetalleAsistencia';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 import {
   obtenerCalendarioVacaciones,
+  obtenerVacacionesPendientesEquipo,
   obtenerTraslapes,
   resolverSolicitudVacaciones,
   mesActualISO,
@@ -42,6 +43,8 @@ export default function MiEquipo() {
   const [permisosPendientes, setPermisosPendientes] = useState(null);
   const [resolviendoPermisoId, setResolviendoPermisoId] = useState(null);
   const [errorPermisos, setErrorPermisos] = useState('');
+  const [vacacionesPendientes, setVacacionesPendientes] = useState(null);
+  const [errorVacacionesPendientes, setErrorVacacionesPendientes] = useState('');
 
   useEffect(() => {
     if (!perfil) return;
@@ -95,9 +98,19 @@ export default function MiEquipo() {
     }
   }
 
+  async function cargarVacacionesPendientes() {
+    try {
+      const datos = await obtenerVacacionesPendientesEquipo();
+      setVacacionesPendientes(datos);
+    } catch (err) {
+      setErrorVacacionesPendientes(err.message);
+    }
+  }
+
   useEffect(() => {
     if (!perfil || !puedeVer) return;
     cargarPermisos();
+    cargarVacacionesPendientes();
   }, [perfil?.id, puedeVer]);
 
   async function resolverPermiso(solicitud, estado) {
@@ -137,6 +150,7 @@ export default function MiEquipo() {
       setTraslapes(null);
       const datos = await obtenerCalendarioVacaciones(mes);
       setCalendario(datos);
+      await cargarVacacionesPendientes();
     } catch (err) {
       setErrorCalendario(err.message);
     } finally {
@@ -147,7 +161,6 @@ export default function MiEquipo() {
   if (!perfil) return null;
 
   const trabajadoresPorId = new Map((calendario?.trabajadores || []).map((t) => [t.id, t]));
-  const pendientes = (calendario?.solicitudes || []).filter((s) => s.estado === 'pendiente');
 
   return (
     <AppShell links={trabajadorLinks} titulo={esRRHH && !esJefatura ? 'Aprobaciones' : 'Mi equipo'}>
@@ -282,18 +295,20 @@ export default function MiEquipo() {
             </>
           )}
 
-          {pendientes.length > 0 && (
+          {errorVacacionesPendientes && (
+            <p className="text-xs text-red-600 mb-2">{errorVacacionesPendientes}</p>
+          )}
+
+          {vacacionesPendientes?.length > 0 && (
             <>
               <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
                 VACACIONES PENDIENTES DE TU EQUIPO
               </p>
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
-                {pendientes.map((s) => (
+                {vacacionesPendientes.map((s) => (
                   <div key={s.id} className="px-4 py-3">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-bold text-[#153A5B]">
-                        {trabajadoresPorId.get(s.trabajador_id)?.nombre_completo}
-                      </p>
+                      <p className="text-sm font-bold text-[#153A5B]">{s.trabajador_nombre}</p>
                       <span className="text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
                         {s.dias_habiles} días hábiles
                       </span>
