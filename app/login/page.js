@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -53,6 +54,12 @@ export default function Login() {
             {cargando ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
+        <Link
+          href="/recuperar-clave"
+          className="block text-center text-xs font-bold text-[#0F5C8C] mt-4"
+        >
+          ¿Olvidaste tu contraseña o es tu primera vez?
+        </Link>
       </div>
     </div>
   );
