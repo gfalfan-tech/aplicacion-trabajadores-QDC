@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
-import { resolverAprobadorEsperado } from '@/lib/cajaChicaLogica';
+import { resolverAprobadorEsperado, calcularTotales, formatearCLP } from '@/lib/cajaChicaLogica';
 
 // Crea una nueva solicitud de compra contra el período de caja chica
 // abierto. Solo jefatura, RR.HH. y administrador pueden solicitar.
@@ -38,6 +38,26 @@ export async function POST(req) {
   if (!periodo) {
     return NextResponse.json(
       { error: 'Todavía no hay un fondo de caja chica abierto. RR.HH. debe ingresar el monto inicial primero.' },
+      { status: 400 }
+    );
+  }
+
+  // No se puede solicitar más de lo que hay disponible físicamente en la
+  // caja en este momento — se recalcula desde cero con todas las
+  // solicitudes del período, igual que hace la pantalla de totales.
+  const { data: solicitudesDelPeriodo } = await admin
+    .from('caja_chica_solicitudes')
+    .select('estado, monto_solicitado, monto_rendido')
+    .eq('periodo_id', periodo.id);
+
+  const totalesActuales = calcularTotales(periodo, solicitudesDelPeriodo || []);
+  if (monto > totalesActuales.disponible) {
+    return NextResponse.json(
+      {
+        error: `El monto solicitado (${formatearCLP(monto)}) supera el total disponible en caja chica (${formatearCLP(
+          totalesActuales.disponible
+        )}). Ajusta el monto o espera a que se recargue el fondo.`,
+      },
       { status: 400 }
     );
   }

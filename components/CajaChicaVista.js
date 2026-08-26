@@ -87,6 +87,19 @@ export default function CajaChicaVista() {
 
   async function enviarSolicitud() {
     setError('');
+    const monto = Number(formSolicitud.monto_solicitado);
+    if (!monto || monto <= 0) {
+      setError('Ingresa un monto válido.');
+      return;
+    }
+    if (estado?.totales && monto > estado.totales.disponible) {
+      setError(
+        `El monto solicitado (${formatearCLP(monto)}) supera el total disponible en caja chica (${formatearCLP(
+          estado.totales.disponible
+        )}). Ajusta el monto o espera a que se recargue el fondo.`
+      );
+      return;
+    }
     setEnviandoSolicitud(true);
     try {
       await crearSolicitudCajaChica(formSolicitud);
