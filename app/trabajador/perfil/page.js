@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
+import CambiarClave from '@/components/CambiarClave';
 import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import { subirFotoPerfil } from '@/lib/subirFotoPerfil';
@@ -200,10 +201,12 @@ export default function Perfil() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-slate-400 mt-4">
+      <p className="text-xs text-slate-400 mt-4 mb-4">
         Tu foto de perfil y tu portada las puedes cambiar tú mismo. Para actualizar el resto de tus
         datos, contacta a RR.HH.
       </p>
+
+      <CambiarClave email={perfil.email} />
     </AppShell>
   );
 }

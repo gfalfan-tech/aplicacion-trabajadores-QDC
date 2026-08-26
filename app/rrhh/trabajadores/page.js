@@ -41,6 +41,9 @@ export default function TrabajadoresRRHH() {
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [eliminandoId, setEliminandoId] = useState(null);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState(null);
+  const [claveNueva, setClaveNueva] = useState('');
+  const [asignandoClave, setAsignandoClave] = useState(false);
+  const [mensajeClave, setMensajeClave] = useState('');
 
   async function cargar() {
     const { data } = await supabase
@@ -145,6 +148,32 @@ export default function TrabajadoresRRHH() {
   function cerrarEdicion() {
     setEditandoId(null);
     setEditForm(null);
+    setClaveNueva('');
+    setMensajeClave('');
+  }
+
+  async function asignarClave(trabajadorId) {
+    if (claveNueva.length < 6) {
+      setMensajeClave('La clave debe tener al menos 6 caracteres.');
+      return;
+    }
+    setAsignandoClave(true);
+    setMensajeClave('');
+    const { data: sesion } = await supabase.auth.getSession();
+    const token = sesion?.session?.access_token;
+    const res = await fetch('/api/admin/set-clave-trabajador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ trabajador_id: trabajadorId, clave: claveNueva }),
+    });
+    const data = await res.json();
+    setAsignandoClave(false);
+    if (!res.ok) {
+      setMensajeClave('Error: ' + data.error);
+      return;
+    }
+    setMensajeClave('Clave asignada. Entrégasela al trabajador para que ingrese.');
+    setClaveNueva('');
   }
 
   async function guardarEdicion(e) {
@@ -629,6 +658,35 @@ export default function TrabajadoresRRHH() {
                 >
                   {guardandoEdicion ? 'Guardando…' : 'Guardar cambios'}
                 </button>
+
+                <div className="pt-3 border-t border-slate-100">
+                  <label className="text-xs text-slate-500 block mb-1">
+                    Asignar clave de acceso
+                    <span className="block text-[10px] text-slate-400 font-normal">
+                      Úsalo si el trabajador no tiene o perdió su clave. Esta clave queda activa de
+                      inmediato — si luego el trabajador cambia su propia clave desde su perfil, esta
+                      deja de servir.
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nueva clave (mín. 6 caracteres)"
+                      value={claveNueva}
+                      onChange={(e) => setClaveNueva(e.target.value)}
+                      className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => asignarClave(t.id)}
+                      disabled={asignandoClave}
+                      className="shrink-0 text-xs font-bold text-white bg-[#153A5B] rounded-lg px-3 py-2 disabled:opacity-60"
+                    >
+                      {asignandoClave ? 'Asignando…' : 'Asignar'}
+                    </button>
+                  </div>
+                  {mensajeClave && <p className="text-xs text-slate-500 mt-1">{mensajeClave}</p>}
+                </div>
               </form>
             )}
           </div>

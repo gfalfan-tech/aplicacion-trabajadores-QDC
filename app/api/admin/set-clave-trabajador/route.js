@@ -1,0 +1,41 @@
+import { NextResponse } from 'next/server';
+import { autenticar } from '@/lib/apiAuth';
+
+// RR.HH./administrador le asigna manualmente una clave a un trabajador
+// (por ejemplo si nunca recibió/perdió su invitación por correo, o no
+// tiene acceso a su correo). Esto cambia directamente la contraseña de
+// su cuenta — no queda registrada en ninguna parte, solo la ve RR.HH.
+// en pantalla al momento de escribirla para poder entregársela.
+//
+// Importante: si el trabajador cambia su propia clave después (desde su
+// perfil), la que asignó RR.HH. deja de servir — la última que se haya
+// definido, por cualquiera de los dos caminos, es la que queda activa.
+export async function POST(req) {
+  let auth;
+  try {
+    auth = await autenticar(req);
+  } catch (e) {
+    return NextResponse.json({ error: e.error }, { status: e.status });
+  }
+  if (!auth.esRRHH) {
+    return NextResponse.json({ error: 'No tienes permiso para asignar claves.' }, { status: 403 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const trabajadorId = body?.trabajador_id;
+  const clave = body?.clave || '';
+
+  if (!trabajadorId) {
+    return NextResponse.json({ error: 'Falta el trabajador.' }, { status: 400 });
+  }
+  if (clave.length < 6) {
+    return NextResponse.json({ error: 'La clave debe tener al menos 6 caracteres.' }, { status: 400 });
+  }
+
+  const { error } = await auth.admin.auth.admin.updateUserById(trabajadorId, { password: clave });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
