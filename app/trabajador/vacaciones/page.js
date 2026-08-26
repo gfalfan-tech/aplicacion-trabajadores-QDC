@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
-import { generarPdfVacaciones } from '@/lib/solicitudPdf';
+import { verPdfVacaciones, descargarPdfVacaciones } from '@/lib/solicitudPdf';
 import { calcularDiasHabiles } from '@/lib/diasHabiles';
 
 const estadoStyle = {
@@ -88,7 +88,11 @@ export default function Vacaciones() {
   }
 
   async function verPdf(s) {
-    await generarPdfVacaciones(s, perfil);
+    await verPdfVacaciones(s, perfil);
+  }
+
+  async function descargarPdf(s) {
+    await descargarPdfVacaciones(s, perfil);
   }
 
   if (!perfil) return null;
@@ -161,14 +165,20 @@ export default function Vacaciones() {
             <p className="text-xs text-slate-500 mt-1">
               {s.fecha_desde} → {s.fecha_hasta}
             </p>
-            {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+            <div className="mt-2 flex gap-2">
               <button
                 onClick={() => verPdf(s)}
-                className="mt-2 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+                className="text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
               >
                 Ver PDF
               </button>
-            )}
+              <button
+                onClick={() => descargarPdf(s)}
+                className="text-xs font-bold text-slate-600 bg-slate-100 rounded-lg px-3 py-2"
+              >
+                Descargar
+              </button>
+            </div>
           </div>
         ))}
       </div>

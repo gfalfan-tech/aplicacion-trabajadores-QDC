@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
-import { generarPdfPermiso } from '@/lib/solicitudPdf';
+import { verPdfPermiso, descargarPdfPermiso } from '@/lib/solicitudPdf';
 
 const estadoStyle = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -114,10 +114,11 @@ export default function Solicitudes() {
   }
 
   async function verPdf(s) {
-    await generarPdfPermiso(
-      { ...s, tipo_permiso: s.tipos_permiso?.nombre },
-      perfil
-    );
+    await verPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, perfil);
+  }
+
+  async function descargarPdf(s) {
+    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, perfil);
   }
 
   if (!perfil) return null;
@@ -217,14 +218,20 @@ export default function Solicitudes() {
             <p className="text-xs text-slate-600 italic leading-relaxed border-l-2 border-slate-200 pl-3">
               {fraseSolicitud(s, perfil)}
             </p>
-            {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+            <div className="mt-3 flex gap-2">
               <button
                 onClick={() => verPdf(s)}
-                className="mt-3 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+                className="text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
               >
                 Ver PDF
               </button>
-            )}
+              <button
+                onClick={() => descargarPdf(s)}
+                className="text-xs font-bold text-slate-600 bg-slate-100 rounded-lg px-3 py-2"
+              >
+                Descargar
+              </button>
+            </div>
           </div>
         ))}
       </div>

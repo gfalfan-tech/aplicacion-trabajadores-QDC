@@ -16,6 +16,15 @@ import {
   resolverSolicitudVacaciones,
   mesActualISO,
 } from '@/lib/vacacionesEquipo';
+import { obtenerPermisosPendientesEquipo, resolverSolicitudPermiso } from '@/lib/permisosEquipo';
+
+function formatFechaPermiso(fechaISO) {
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  return new Date(anio, mes - 1, dia).toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'long',
+  });
+}
 
 export default function MiEquipo() {
   const { perfil, esJefatura } = useAuth();
@@ -27,6 +36,9 @@ export default function MiEquipo() {
   const [traslapes, setTraslapes] = useState(null);
   const [resolviendo, setResolviendo] = useState(false);
   const [detalleSeleccionado, setDetalleSeleccionado] = useState(null); // trabajador con asistencia
+  const [permisosPendientes, setPermisosPendientes] = useState(null);
+  const [resolviendoPermisoId, setResolviendoPermisoId] = useState(null);
+  const [errorPermisos, setErrorPermisos] = useState('');
 
   useEffect(() => {
     if (!perfil) return;
@@ -70,6 +82,33 @@ export default function MiEquipo() {
       activo = false;
     };
   }, [perfil?.id, esJefatura, mes]);
+
+  async function cargarPermisos() {
+    try {
+      const datos = await obtenerPermisosPendientesEquipo();
+      setPermisosPendientes(datos);
+    } catch (err) {
+      setErrorPermisos(err.message);
+    }
+  }
+
+  useEffect(() => {
+    if (!perfil || !esJefatura) return;
+    cargarPermisos();
+  }, [perfil?.id, esJefatura]);
+
+  async function resolverPermiso(solicitud, estado) {
+    setResolviendoPermisoId(solicitud.id);
+    setErrorPermisos('');
+    try {
+      await resolverSolicitudPermiso(solicitud.id, estado);
+      await cargarPermisos();
+    } catch (err) {
+      setErrorPermisos(err.message);
+    } finally {
+      setResolviendoPermisoId(null);
+    }
+  }
 
   async function pedirConfirmacion(solicitud) {
     setConfirmando(solicitud);
@@ -176,6 +215,59 @@ export default function MiEquipo() {
               </div>
             ))}
           </div>
+
+          {errorPermisos && <p className="text-xs text-red-600 mb-2">{errorPermisos}</p>}
+
+          {permisosPendientes?.length > 0 && (
+            <>
+              <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
+                PERMISOS PENDIENTES DE TU EQUIPO
+              </p>
+              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
+                {permisosPendientes.map((s) => {
+                  const dias =
+                    s.fecha_desde === s.fecha_hasta
+                      ? `el ${formatFechaPermiso(s.fecha_desde)}`
+                      : `del ${formatFechaPermiso(s.fecha_desde)} al ${formatFechaPermiso(s.fecha_hasta)}`;
+                  const horas =
+                    s.hora_desde && s.hora_hasta
+                      ? ` de ${s.hora_desde.slice(0, 5)} a ${s.hora_hasta.slice(0, 5)}`
+                      : '';
+                  return (
+                    <div key={s.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-bold text-[#153A5B]">{s.trabajador_nombre}</p>
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
+                          {s.tipos_permiso?.nombre}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-2">
+                        {dias}
+                        {horas}
+                        {s.motivo && ` — ${s.motivo}`}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => resolverPermiso(s, 'aprobada')}
+                          disabled={resolviendoPermisoId === s.id}
+                          className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-2 disabled:opacity-60"
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          onClick={() => resolverPermiso(s, 'rechazada')}
+                          disabled={resolviendoPermisoId === s.id}
+                          className="text-xs font-bold text-red-800 bg-red-100 rounded-lg px-3 py-2 disabled:opacity-60"
+                        >
+                          Rechazar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {pendientes.length > 0 && (
             <>

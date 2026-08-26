@@ -6,7 +6,12 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
-import { generarPdfPermiso, generarPdfVacaciones } from '@/lib/solicitudPdf';
+import {
+  verPdfPermiso as abrirPdfPermiso,
+  descargarPdfPermiso,
+  verPdfVacaciones as abrirPdfVacaciones,
+  descargarPdfVacaciones,
+} from '@/lib/solicitudPdf';
 import Avatar from '@/components/Avatar';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 
@@ -135,12 +140,22 @@ export default function VerPerfilTrabajador() {
 
   async function verPdfPermiso(s) {
     if (!trabajador) return;
-    await generarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, trabajador);
+    await abrirPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, trabajador);
+  }
+
+  async function descargarPermiso(s) {
+    if (!trabajador) return;
+    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, trabajador);
   }
 
   async function verPdfVacaciones(s) {
     if (!trabajador) return;
-    await generarPdfVacaciones(s, trabajador);
+    await abrirPdfVacaciones(s, trabajador);
+  }
+
+  async function descargarVacaciones(s) {
+    if (!trabajador) return;
+    await descargarPdfVacaciones(s, trabajador);
   }
 
   return (
@@ -273,14 +288,20 @@ export default function VerPerfilTrabajador() {
                   <p className="text-xs text-slate-500 mt-1">
                     {s.fecha_desde} → {s.fecha_hasta}
                   </p>
-                  {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+                  <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => verPdfVacaciones(s)}
-                      className="mt-2 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+                      className="text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
                     >
                       Ver PDF
                     </button>
-                  )}
+                    <button
+                      onClick={() => descargarVacaciones(s)}
+                      className="text-xs font-bold text-slate-600 bg-slate-100 rounded-lg px-3 py-2"
+                    >
+                      Descargar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -308,14 +329,20 @@ export default function VerPerfilTrabajador() {
                     {s.fecha_desde} → {s.fecha_hasta}
                     {s.motivo ? ` · ${s.motivo}` : ''}
                   </p>
-                  {(s.estado === 'aprobada' || s.estado === 'rechazada') && (
+                  <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => verPdfPermiso(s)}
-                      className="mt-2 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+                      className="text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
                     >
                       Ver PDF
                     </button>
-                  )}
+                    <button
+                      onClick={() => descargarPermiso(s)}
+                      className="text-xs font-bold text-slate-600 bg-slate-100 rounded-lg px-3 py-2"
+                    >
+                      Descargar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
