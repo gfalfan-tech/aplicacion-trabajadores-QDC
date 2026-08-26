@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell, { CLAVE_ULTIMA_VISTA } from '@/components/AppShell';
@@ -30,6 +31,7 @@ function antiguedad(fechaIngreso) {
 // RR.HH. en /rrhh/trabajadores.
 export default function DirectorioPage() {
   const { perfil, esRRHH } = useAuth();
+  const router = useRouter();
   const [vistaGuardada, setVistaGuardada] = useState(null);
   useEffect(() => {
     setVistaGuardada(window.localStorage.getItem(CLAVE_ULTIMA_VISTA));
@@ -62,6 +64,10 @@ export default function DirectorioPage() {
         .some((campo) => campo.toLowerCase().includes(q))
     );
   }, [lista, busqueda]);
+
+  function chatearCon(id) {
+    router.push(`/mensajes?con=${id}`);
+  }
 
   return (
     <AppShell links={links} titulo="Directorio">
@@ -163,9 +169,18 @@ export default function DirectorioPage() {
                     </div>
                   </div>
 
+                  {seleccionado.id !== perfil?.id && (
+                    <button
+                      onClick={() => chatearCon(seleccionado.id)}
+                      className="w-full mt-5 bg-[#153A5B] hover:bg-[#0F5C8C] text-white font-bold text-sm rounded-lg py-2.5"
+                    >
+                      💬 Chatear
+                    </button>
+                  )}
+
                   <button
                     onClick={() => setSeleccionado(null)}
-                    className="w-full mt-5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm rounded-lg py-2"
+                    className="w-full mt-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm rounded-lg py-2"
                   >
                     Cerrar
                   </button>

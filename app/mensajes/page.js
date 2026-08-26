@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import AppShell, { CLAVE_ULTIMA_VISTA } from '@/components/AppShell';
@@ -23,7 +24,20 @@ function tiempoRelativo(fecha) {
 }
 
 export default function MensajesPage() {
+  return (
+    <Suspense fallback={null}>
+      <MensajesPageContenido />
+    </Suspense>
+  );
+}
+
+function MensajesPageContenido() {
   const { perfil, esRRHH } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // /trabajador/directorio ?con=<id> nos manda acá con la instrucción de
+  // abrir (o crear) el chat privado con ese colaborador.
+  const chatConId = searchParams.get('con');
   // /mensajes es una pantalla "neutral" (no vive bajo /rrhh ni /trabajador),
   // así que para alguien con doble rol (RRHH que también puede navegar como
   // trabajador) hay que mostrarle el menú de la vista en la que estaba
@@ -204,6 +218,17 @@ export default function MensajesPage() {
     abrir(nuevaConv.id);
     cerrarModalNuevo();
   }
+
+  // Si llegamos con ?con=<id> (por ejemplo desde "Chatear" en el
+  // Directorio), abre ese chat privado automáticamente y limpia el
+  // parámetro de la URL para no repetirlo si se recarga la página.
+  useEffect(() => {
+    if (!chatConId || !perfil) return;
+    if (chatConId === perfil.id) return;
+    iniciarPrivado(chatConId);
+    router.replace('/mensajes');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatConId, perfil?.id]);
 
   async function crearGrupo(e) {
     e.preventDefault();
