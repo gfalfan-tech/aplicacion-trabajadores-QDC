@@ -111,7 +111,7 @@ export default function RRHHHome() {
       </div>
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">GESTIÓN</p>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <Link
           href="/rrhh/feriados"
           className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
@@ -143,6 +143,14 @@ export default function RRHHHome() {
           <p className="text-2xl mb-2">🏖️</p>
           <p className="text-sm font-bold text-[#153A5B]">Vacaciones</p>
           <p className="text-xs text-slate-500 mt-0.5">Calendario del equipo</p>
+        </Link>
+        <Link
+          href="/rrhh/caja-chica"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
+        >
+          <p className="text-2xl mb-2">💰</p>
+          <p className="text-sm font-bold text-[#153A5B]">Caja Chica</p>
+          <p className="text-xs text-slate-500 mt-0.5">Fondo y solicitudes</p>
         </Link>
       </div>
 

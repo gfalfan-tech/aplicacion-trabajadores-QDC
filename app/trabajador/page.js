@@ -31,7 +31,7 @@ function formatearFechaCorta(fechaISO) {
 }
 
 export default function TrabajadorHome() {
-  const { perfil, esJefatura } = useAuth();
+  const { perfil, esJefatura, esRRHH } = useAuth();
   const [saldo, setSaldo] = useState(null);
   const [pendientes, setPendientes] = useState(0);
   const [cumples, setCumples] = useState([]);
@@ -121,6 +121,15 @@ export default function TrabajadorHome() {
           >
             <p className="text-2xl mb-2">👥</p>
             <p className="text-sm font-bold text-[#153A5B]">Mi equipo — asistencia del mes</p>
+          </Link>
+        )}
+        {(esJefatura || esRRHH) && (
+          <Link
+            href="/trabajador/caja-chica"
+            className="bg-white border border-slate-200 rounded-2xl p-4 col-span-2"
+          >
+            <p className="text-2xl mb-2">💰</p>
+            <p className="text-sm font-bold text-[#153A5B]">Caja Chica</p>
           </Link>
         )}
       </div>
