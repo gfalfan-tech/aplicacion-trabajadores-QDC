@@ -66,6 +66,7 @@ function MensajesPageContenido() {
 
   const [mostrarParticipantes, setMostrarParticipantes] = useState(false);
   const [confirmarEliminarGrupo, setConfirmarEliminarGrupo] = useState(false);
+  const [confirmarEliminarConvId, setConfirmarEliminarConvId] = useState(null);
 
   const activa = conversaciones.find((c) => c.conversacion_id === activaId);
 
@@ -302,6 +303,27 @@ function MensajesPageContenido() {
     setMostrarParticipantes(false);
   }
 
+  // "Eliminar" una conversación solo la borra de MI lista — no se toca la
+  // fila del otro participante, así que sigue viendo el chat completo. Si
+  // más adelante llega un mensaje nuevo, vuelve a aparecer sola (igual que
+  // en WhatsApp). No confundir con "Eliminar grupo" (borra para todos).
+  async function eliminarConversacion(id) {
+    if (!perfil) return;
+    await supabase
+      .from('conversaciones_participantes')
+      .update({ oculta_desde: new Date().toISOString() })
+      .eq('conversacion_id', id)
+      .eq('trabajador_id', perfil.id);
+    setConfirmarEliminarConvId(null);
+    if (activaId === id) {
+      setActivaId(null);
+      setMensajes([]);
+      setParticipantes([]);
+      setVistaMovilLista(true);
+    }
+    recargar();
+  }
+
   if (!perfil) return null;
 
   const nombreConversacion = activa
@@ -339,38 +361,68 @@ function MensajesPageContenido() {
             )}
             {conversaciones.map((c) => {
               const nombre = c.tipo === 'grupo' ? c.nombre : c.otros_nombres || 'Trabajador';
+              const confirmando = confirmarEliminarConvId === c.conversacion_id;
               return (
-                <button
+                <div
                   key={c.conversacion_id}
-                  onClick={() => abrir(c.conversacion_id)}
-                  className={`w-full text-left px-3 py-3 hover:bg-slate-50 flex items-start gap-2 ${
+                  className={`w-full flex items-center gap-1 ${
                     c.conversacion_id === activaId ? 'bg-[#E6F1FB]' : ''
                   }`}
                 >
-                  {c.tipo === 'grupo' ? (
-                    <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-lg flex items-center justify-center shrink-0">
-                      👥
-                    </div>
-                  ) : (
-                    <Avatar url={c.otro_avatar_url} nombre={nombre} size={36} />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-bold text-[#153A5B] truncate">{nombre}</p>
-                      {c.no_leidos > 0 && (
-                        <span className="bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shrink-0">
-                          {c.no_leidos > 9 ? '9+' : c.no_leidos}
-                        </span>
+                  <button
+                    onClick={() => abrir(c.conversacion_id)}
+                    className="flex-1 min-w-0 text-left px-3 py-3 hover:bg-slate-50 flex items-start gap-2"
+                  >
+                    {c.tipo === 'grupo' ? (
+                      <div className="w-9 h-9 rounded-full bg-[#E6F1FB] text-lg flex items-center justify-center shrink-0">
+                        👥
+                      </div>
+                    ) : (
+                      <Avatar url={c.otro_avatar_url} nombre={nombre} size={36} />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-[#153A5B] truncate">{nombre}</p>
+                        {c.no_leidos > 0 && (
+                          <span className="bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shrink-0">
+                            {c.no_leidos > 9 ? '9+' : c.no_leidos}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                        {c.ultimo_texto || 'Sin mensajes todavía.'}
+                      </p>
+                      {c.ultimo_en && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">{tiempoRelativo(c.ultimo_en)}</p>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">
-                      {c.ultimo_texto || 'Sin mensajes todavía.'}
-                    </p>
-                    {c.ultimo_en && (
-                      <p className="text-[10px] text-slate-400 mt-0.5">{tiempoRelativo(c.ultimo_en)}</p>
-                    )}
-                  </div>
-                </button>
+                  </button>
+
+                  {confirmando ? (
+                    <div className="flex flex-col gap-1 pr-2 shrink-0">
+                      <button
+                        onClick={() => eliminarConversacion(c.conversacion_id)}
+                        className="text-[9px] font-bold text-white bg-red-600 rounded px-2 py-1"
+                      >
+                        Confirmar
+                      </button>
+                      <button
+                        onClick={() => setConfirmarEliminarConvId(null)}
+                        className="text-[9px] font-bold text-slate-500"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmarEliminarConvId(c.conversacion_id)}
+                      title="Eliminar conversación (solo para mí)"
+                      className="text-slate-300 hover:text-red-600 text-sm px-2 shrink-0"
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
