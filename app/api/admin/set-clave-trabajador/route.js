@@ -46,5 +46,17 @@ export async function POST(req) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  // Marca clave_definida = true: esta clave la asignó RR.HH. directamente
+  // (no viene de la invitación por correo), así que al trabajador NO se le
+  // debe pedir pasar por "Crea tu contraseña" — entra directo a su perfil
+  // con la clave que le entregó RR.HH.
+  const { error: errorFlag } = await auth.admin
+    .from('trabajadores')
+    .update({ clave_definida: true })
+    .eq('id', trabajadorId);
+  if (errorFlag) {
+    return NextResponse.json({ error: 'La clave se asignó, pero hubo un error: ' + errorFlag.message }, { status: 400 });
+  }
+
   return NextResponse.json({ ok: true });
 }
