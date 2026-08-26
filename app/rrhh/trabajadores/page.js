@@ -183,73 +183,91 @@ export default function TrabajadoresRRHH() {
     e.preventDefault();
     if (!editForm.roles.length) {
       setMensaje(
-        'Debes dejar marcado al menos un rol (normalmente "trabajador") antes de guardar — si no, esa persona queda sin acceso a la app.'
+        '⚠️ Debes dejar marcado al menos un rol (normalmente "trabajador") antes de guardar — si no, esa persona queda sin acceso a la app.'
       );
       return;
     }
     setGuardandoEdicion(true);
-    const { error } = await supabase
-      .from('trabajadores')
-      .update({
-        nombre_completo: editForm.nombre_completo,
-        rut: editForm.rut,
-        cargo: editForm.cargo || null,
-        telefono: editForm.telefono || null,
-        area_id: editForm.area_id || null,
-        jefe_directo_id: editForm.jefe_directo_id || null,
-        fecha_ingreso: editForm.fecha_ingreso,
-        fecha_nacimiento: editForm.fecha_nacimiento || null,
-        tipo_contrato: editForm.tipo_contrato || null,
-        registra_asistencia: editForm.registra_asistencia || null,
-        estado: editForm.estado,
-      })
-      .eq('id', editandoId);
-    if (error) {
-      setGuardandoEdicion(false);
-      setMensaje('Error al guardar: ' + error.message);
-      return;
-    }
+    setMensaje('');
+    // Todo el guardado va envuelto en try/catch: si cualquier paso lanza una
+    // excepción inesperada (por ejemplo, el servidor devuelve un error que
+    // no es JSON y el .json() falla al parsearlo), antes quedaba como una
+    // promesa rechazada sin manejar — el botón se quedaba pegado en
+    // "Guardando…" y no aparecía ningún mensaje, dando la sensación de que
+    // "no pasó nada" aunque en realidad algo sí falló.
+    try {
+      const { error } = await supabase
+        .from('trabajadores')
+        .update({
+          nombre_completo: editForm.nombre_completo,
+          rut: editForm.rut,
+          cargo: editForm.cargo || null,
+          telefono: editForm.telefono || null,
+          area_id: editForm.area_id || null,
+          jefe_directo_id: editForm.jefe_directo_id || null,
+          fecha_ingreso: editForm.fecha_ingreso,
+          fecha_nacimiento: editForm.fecha_nacimiento || null,
+          tipo_contrato: editForm.tipo_contrato || null,
+          registra_asistencia: editForm.registra_asistencia || null,
+          estado: editForm.estado,
+        })
+        .eq('id', editandoId);
+      if (error) {
+        setGuardandoEdicion(false);
+        setMensaje('❌ Error al guardar los datos: ' + error.message);
+        return;
+      }
 
-    // Los roles se actualizan por una ruta de servidor (no directo desde
-    // el navegador) — así, si estás editando TU PROPIO perfil y te sacas
-    // momentáneamente el rol rrhh/administrador a mitad del reemplazo, el
-    // guardado no queda a medio camino ni te deja sin acceso: la ruta usa
-    // la llave de servicio, que no depende de la RLS que sí exige tener
-    // ese rol en el momento exacto de cada operación.
-    const { data: sesionRoles } = await supabase.auth.getSession();
-    const tokenRoles = sesionRoles?.session?.access_token;
-    const resRoles = await fetch('/api/admin/actualizar-roles', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRoles}` },
-      body: JSON.stringify({ trabajador_id: editandoId, roles: editForm.roles }),
-    });
-    if (!resRoles.ok) {
-      const dataRoles = await resRoles.json().catch(() => ({}));
-      setGuardandoEdicion(false);
-      setMensaje('Error al actualizar roles: ' + (dataRoles.error || 'Error desconocido'));
-      return;
-    }
+      // Los roles se actualizan por una ruta de servidor (no directo desde
+      // el navegador) — así, si estás editando TU PROPIO perfil y te sacas
+      // momentáneamente el rol rrhh/administrador a mitad del reemplazo, el
+      // guardado no queda a medio camino ni te deja sin acceso: la ruta usa
+      // la llave de servicio, que no depende de la RLS que sí exige tener
+      // ese rol en el momento exacto de cada operación.
+      const { data: sesionRoles } = await supabase.auth.getSession();
+      const tokenRoles = sesionRoles?.session?.access_token;
+      const resRoles = await fetch('/api/admin/actualizar-roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenRoles}` },
+        body: JSON.stringify({ trabajador_id: editandoId, roles: editForm.roles }),
+      });
+      if (!resRoles.ok) {
+        const dataRoles = await resRoles.json().catch(() => ({}));
+        setGuardandoEdicion(false);
+        setMensaje('❌ Error al actualizar roles: ' + (dataRoles.error || `Error ${resRoles.status}`));
+        return;
+      }
 
-    const resVacaciones = await fetch('/api/admin/actualizar-vacaciones', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        trabajador_id: editandoId,
-        dias_pendientes_base: editForm.dias_pendientes_base,
-        dias_progresivos_reconocidos: editForm.dias_progresivos_reconocidos,
-      }),
-    });
-    if (!resVacaciones.ok) {
-      const dataVacaciones = await resVacaciones.json();
+      const resVacaciones = await fetch('/api/admin/actualizar-vacaciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trabajador_id: editandoId,
+          dias_pendientes_base: editForm.dias_pendientes_base,
+          dias_progresivos_reconocidos: editForm.dias_progresivos_reconocidos,
+        }),
+      });
+      if (!resVacaciones.ok) {
+        const dataVacaciones = await resVacaciones.json().catch(() => ({}));
+        setGuardandoEdicion(false);
+        setMensaje(
+          '⚠️ Se guardaron los datos y los roles, pero hubo un error con las vacaciones: ' +
+            (dataVacaciones.error || `Error ${resVacaciones.status}`)
+        );
+        cargar();
+        return;
+      }
+
       setGuardandoEdicion(false);
-      setMensaje('Se guardaron los datos, pero hubo un error con las vacaciones: ' + dataVacaciones.error);
+      setMensaje(
+        `✅ Guardado. Vacaciones: saldo "al día" quedó registrado hoy (${editForm.dias_pendientes_base} pendientes + ${editForm.dias_progresivos_reconocidos} progresivos).`
+      );
+      cerrarEdicion();
       cargar();
-      return;
+    } catch (err) {
+      setGuardandoEdicion(false);
+      setMensaje('❌ Error inesperado al guardar: ' + (err?.message || String(err)));
     }
-
-    setGuardandoEdicion(false);
-    cerrarEdicion();
-    cargar();
   }
 
   async function eliminar(id) {
@@ -433,7 +451,19 @@ export default function TrabajadoresRRHH() {
         </form>
       )}
 
-      {mensaje && !mostrarForm && <p className="text-xs text-slate-500 mb-3">{mensaje}</p>}
+      {mensaje && !mostrarForm && (
+        <p
+          className={`text-xs font-bold rounded-lg px-3 py-2 mb-3 border ${
+            mensaje.startsWith('✅')
+              ? 'text-green-700 bg-green-50 border-green-200'
+              : mensaje.startsWith('⚠️')
+              ? 'text-amber-700 bg-amber-50 border-amber-200'
+              : 'text-red-700 bg-red-50 border-red-200'
+          }`}
+        >
+          {mensaje}
+        </p>
+      )}
 
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {lista.map((t) => (
