@@ -8,6 +8,7 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import CalendarioVacaciones from '@/components/CalendarioVacaciones';
 import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
+import ModalDetalleAsistencia from '@/components/ModalDetalleAsistencia';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 import {
   obtenerCalendarioVacaciones,
@@ -25,6 +26,7 @@ export default function MiEquipo() {
   const [confirmando, setConfirmando] = useState(null); // solicitud a confirmar
   const [traslapes, setTraslapes] = useState(null);
   const [resolviendo, setResolviendo] = useState(false);
+  const [detalleSeleccionado, setDetalleSeleccionado] = useState(null); // trabajador con asistencia
 
   useEffect(() => {
     if (!perfil) return;
@@ -121,26 +123,38 @@ export default function MiEquipo() {
             {equipo?.length === 0 && (
               <p className="text-sm text-slate-400 p-4">No tienes a nadie a cargo en este momento.</p>
             )}
-            {equipo?.map((p) => (
-              <div key={p.id} className="flex items-center justify-between px-4 py-3 gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <Avatar url={p.avatar_url} nombre={p.nombre_completo} size={36} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-[#153A5B] truncate">{p.nombre_completo}</p>
-                    <p className="text-xs text-slate-500 truncate">{p.cargo || 'Sin cargo'}</p>
+            {equipo?.map((p) => {
+              const clicable = p.registra_asistencia === 'SI' && p.asistencia;
+              return (
+                <div
+                  key={p.id}
+                  onClick={clicable ? () => setDetalleSeleccionado(p) : undefined}
+                  className={`flex items-center justify-between px-4 py-3 gap-3 ${
+                    clicable ? 'cursor-pointer hover:bg-slate-50' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar url={p.avatar_url} nombre={p.nombre_completo} size={36} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[#153A5B] truncate">{p.nombre_completo}</p>
+                      <p className="text-xs text-slate-500 truncate">{p.cargo || 'Sin cargo'}</p>
+                    </div>
                   </div>
+                  {clicable ? (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <p className="text-xs text-slate-500 text-right">
+                        {p.asistencia.dias_inasistencia} inasist.
+                        <br />
+                        {formatearMinutosAtraso(p.asistencia.atraso_minutos)} atraso
+                      </p>
+                      <span className="text-slate-300">›</span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-300 shrink-0">No aplica</p>
+                  )}
                 </div>
-                {p.registra_asistencia === 'SI' && p.asistencia ? (
-                  <p className="text-xs text-slate-500 text-right shrink-0">
-                    {p.asistencia.dias_inasistencia} inasist.
-                    <br />
-                    {formatearMinutosAtraso(p.asistencia.atraso_minutos)} atraso
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-300 shrink-0">No aplica</p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
@@ -216,6 +230,14 @@ export default function MiEquipo() {
             <p className="text-sm text-slate-400">{errorCalendario || 'Cargando…'}</p>
           )}
         </>
+      )}
+
+      {detalleSeleccionado && (
+        <ModalDetalleAsistencia
+          trabajador={detalleSeleccionado}
+          asistencia={detalleSeleccionado.asistencia}
+          onCerrar={() => setDetalleSeleccionado(null)}
+        />
       )}
 
       {confirmando && traslapes && traslapes.length > 0 && (

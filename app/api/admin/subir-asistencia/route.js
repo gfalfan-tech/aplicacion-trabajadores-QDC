@@ -107,6 +107,14 @@ export async function POST(req) {
       }
     }
 
+    // El detalle día por día que se guarda respeta el mismo ajuste por
+    // vacaciones que el total: un día que dejó de contar como inasistencia
+    // por caer en vacaciones aprobadas no se muestra como inasistencia en
+    // el detalle (pero sí queda su atraso, si tuvo).
+    const detalleDias = (fila.detalle_dias || []).map((d) =>
+      fechasAjustadas.includes(d.fecha) ? { ...d, inasistencia: false } : d
+    ).filter((d) => d.atraso_minutos > 0 || d.inasistencia);
+
     const { error } = await admin.from('asistencia_mensual').upsert(
       {
         trabajador_id: trabajador.id,
@@ -117,6 +125,7 @@ export async function POST(req) {
         cantidad_atrasos: fila.cantidad_atrasos,
         salidas_anticipadas_cantidad: fila.salidas_anticipadas_cantidad,
         dias_licencia_medica: fila.dias_licencia_medica,
+        detalle_dias: detalleDias,
         subido_por: userData.user.id,
       },
       { onConflict: 'trabajador_id,periodo_desde,periodo_hasta' }
