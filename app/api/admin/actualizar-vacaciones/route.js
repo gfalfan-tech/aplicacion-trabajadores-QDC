@@ -29,9 +29,15 @@ export async function POST(req) {
 
   const admin = createClient(supabaseUrl, serviceKey);
 
+  const ahora = new Date();
   const { error } = await admin.from('vacaciones_saldo_inicial').insert({
     trabajador_id: body.trabajador_id,
-    fecha_corte: new Date().toISOString().slice(0, 10),
+    fecha_corte: ahora.toISOString().slice(0, 10),
+    // creado_en (fecha Y hora exacta) es lo que usa v_vacaciones_saldo para
+    // desempatar cuando hay más de una edición el mismo día — sin esto, la
+    // vista puede quedarse mostrando una edición anterior del mismo día en
+    // vez de la que se acaba de guardar.
+    creado_en: ahora.toISOString(),
     dias_pendientes_base: body.dias_pendientes_base || 0,
     dias_progresivos_reconocidos: body.dias_progresivos_reconocidos || 0,
   });

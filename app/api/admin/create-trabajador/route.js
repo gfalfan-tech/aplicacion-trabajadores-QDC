@@ -51,9 +51,14 @@ export async function POST(req) {
   }
 
   if (body.dias_pendientes_base != null) {
+    const ahora = new Date();
     await admin.from('vacaciones_saldo_inicial').insert({
       trabajador_id: userId,
-      fecha_corte: new Date().toISOString().slice(0, 10),
+      fecha_corte: ahora.toISOString().slice(0, 10),
+      // Ver comentario en /api/admin/actualizar-vacaciones: creado_en
+      // desempata cuando esta fila y una edición posterior quedan con la
+      // misma fecha_corte (mismo día).
+      creado_en: ahora.toISOString(),
       dias_pendientes_base: body.dias_pendientes_base,
       dias_progresivos_reconocidos: body.dias_progresivos_reconocidos || 0,
     });

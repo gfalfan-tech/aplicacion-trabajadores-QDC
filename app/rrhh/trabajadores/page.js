@@ -128,7 +128,10 @@ export default function TrabajadoresRRHH() {
       .from('vacaciones_saldo_inicial')
       .select('dias_pendientes_base, dias_progresivos_reconocidos')
       .eq('trabajador_id', t.id)
+      // Desempata por creado_en (fecha y hora exacta) para no quedarse con
+      // una edición vieja del mismo día cuando fecha_corte empata.
       .order('fecha_corte', { ascending: false })
+      .order('creado_en', { ascending: false })
       .limit(1)
       .maybeSingle();
 
