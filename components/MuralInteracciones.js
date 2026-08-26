@@ -34,11 +34,12 @@ export default function MuralInteracciones({
   const [textoComentario, setTextoComentario] = useState('');
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [mostrarSelectorReaccion, setMostrarSelectorReaccion] = useState(false);
+  const [mostrarDetalleReacciones, setMostrarDetalleReacciones] = useState(false);
 
   async function cargarReacciones() {
     const { data } = await supabase
       .from('mural_reacciones')
-      .select('trabajador_id, tipo')
+      .select('trabajador_id, tipo, trabajadores(nombre_completo, avatar_url)')
       .eq('publicacion_id', publicacionId);
     setReacciones(data || []);
   }
@@ -65,6 +66,7 @@ export default function MuralInteracciones({
   const miReaccion = reacciones.find((r) => r.trabajador_id === trabajadorId);
   const conteoPorTipo = REACCIONES.map((r) => ({
     ...r,
+    personas: reacciones.filter((x) => x.tipo === r.tipo),
     cantidad: reacciones.filter((x) => x.tipo === r.tipo).length,
   })).filter((r) => r.cantidad > 0);
   const totalReacciones = reacciones.length;
@@ -157,13 +159,16 @@ export default function MuralInteracciones({
       </div>
 
       {totalReacciones > 0 && (
-        <div className="flex items-center gap-1 mt-2 text-xs text-slate-500">
+        <button
+          onClick={() => setMostrarDetalleReacciones(true)}
+          className="flex items-center gap-1 mt-2 text-xs text-slate-500 hover:underline"
+        >
           {conteoPorTipo.map((r) => (
             <span key={r.tipo} className="flex items-center gap-0.5">
               {r.emoji} {r.cantidad}
             </span>
           ))}
-        </div>
+        </button>
       )}
 
       {mostrarComentarios && (
@@ -210,6 +215,51 @@ export default function MuralInteracciones({
               Enviar
             </button>
           </form>
+        </div>
+      )}
+
+      {mostrarDetalleReacciones && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          onClick={() => setMostrarDetalleReacciones(false)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <p className="text-sm font-bold text-[#153A5B]">Reacciones ({totalReacciones})</p>
+              <button
+                onClick={() => setMostrarDetalleReacciones(false)}
+                className="text-slate-400 text-xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto px-4 py-2">
+              {conteoPorTipo.map((r) => (
+                <div key={r.tipo} className="py-2.5 border-b border-slate-100 last:border-b-0">
+                  <p className="text-xs font-bold text-slate-500 mb-1.5">
+                    {r.emoji} {r.label} ({r.cantidad})
+                  </p>
+                  <div className="space-y-1.5">
+                    {r.personas.map((p) => (
+                      <div key={p.trabajador_id} className="flex items-center gap-2">
+                        <Avatar
+                          url={p.trabajadores?.avatar_url}
+                          nombre={p.trabajadores?.nombre_completo}
+                          size={24}
+                        />
+                        <p className="text-xs text-slate-700">
+                          {p.trabajadores?.nombre_completo || 'Trabajador'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
