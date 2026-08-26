@@ -47,6 +47,14 @@ export default function VerPerfilTrabajador() {
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
 
+  // Editar fechas o cancelar una reserva de vacaciones ya aprobada (por
+  // fuerza mayor). "modoVacacion" es 'editar' o 'cancelar'.
+  const [vacacionActiva, setVacacionActiva] = useState(null);
+  const [modoVacacion, setModoVacacion] = useState(null);
+  const [formVacacion, setFormVacacion] = useState({ fecha_desde: '', fecha_hasta: '', motivo: '' });
+  const [guardandoVacacion, setGuardandoVacacion] = useState(false);
+  const [errorVacacion, setErrorVacacion] = useState('');
+
   useEffect(() => {
     if (!id) return;
     let activo = true;
@@ -156,6 +164,73 @@ export default function VerPerfilTrabajador() {
   async function descargarVacaciones(s) {
     if (!trabajador) return;
     await descargarPdfVacaciones(s, trabajador);
+  }
+
+  async function recargarVacaciones() {
+    const [{ data: saldoData }, { data: vacacionesData }] = await Promise.all([
+      supabase.from('v_vacaciones_saldo').select('*').eq('trabajador_id', id).maybeSingle(),
+      supabase
+        .from('solicitudes_vacaciones')
+        .select('*')
+        .eq('trabajador_id', id)
+        .order('created_at', { ascending: false }),
+    ]);
+    setSaldo(saldoData || null);
+    setVacaciones(vacacionesData || []);
+  }
+
+  function abrirEditarVacacion(s) {
+    setVacacionActiva(s);
+    setModoVacacion('editar');
+    setFormVacacion({ fecha_desde: s.fecha_desde, fecha_hasta: s.fecha_hasta, motivo: '' });
+    setErrorVacacion('');
+  }
+
+  function abrirCancelarVacacion(s) {
+    setVacacionActiva(s);
+    setModoVacacion('cancelar');
+    setFormVacacion({ fecha_desde: '', fecha_hasta: '', motivo: '' });
+    setErrorVacacion('');
+  }
+
+  function cerrarModalVacacion() {
+    setVacacionActiva(null);
+    setModoVacacion(null);
+    setErrorVacacion('');
+  }
+
+  async function guardarVacacion() {
+    if (!vacacionActiva || !formVacacion.motivo.trim()) {
+      setErrorVacacion('Debes indicar el motivo (por ejemplo, la razón de fuerza mayor).');
+      return;
+    }
+    if (modoVacacion === 'editar' && formVacacion.fecha_desde > formVacacion.fecha_hasta) {
+      setErrorVacacion('La fecha de término no puede ser antes que la de inicio.');
+      return;
+    }
+    setGuardandoVacacion(true);
+    setErrorVacacion('');
+    const { data: sesion } = await supabase.auth.getSession();
+    const token = sesion?.session?.access_token;
+    const res = await fetch('/api/admin/administrar-vacacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        solicitudId: vacacionActiva.id,
+        accion: modoVacacion,
+        fecha_desde: formVacacion.fecha_desde,
+        fecha_hasta: formVacacion.fecha_hasta,
+        motivo: formVacacion.motivo.trim(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setGuardandoVacacion(false);
+    if (!res.ok) {
+      setErrorVacacion(data.error || `Error ${res.status}`);
+      return;
+    }
+    await recargarVacaciones();
+    cerrarModalVacacion();
   }
 
   return (
@@ -301,7 +376,30 @@ export default function VerPerfilTrabajador() {
                     >
                       Descargar
                     </button>
+                    {s.estado === 'aprobada' && (
+                      <>
+                        <button
+                          onClick={() => abrirEditarVacacion(s)}
+                          className="text-xs font-bold text-[#153A5B] border border-slate-200 rounded-lg px-3 py-2"
+                        >
+                          Editar fechas
+                        </button>
+                        <button
+                          onClick={() => abrirCancelarVacacion(s)}
+                          className="text-xs font-bold text-red-700 bg-red-100 rounded-lg px-3 py-2"
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    )}
                   </div>
+                  {s.motivo_edicion && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {s.estado === 'cancelada' ? 'Cancelada' : 'Editada'} por RR.HH.
+                      {s.editado_en ? ` el ${new Date(s.editado_en).toLocaleDateString('es-CL')}` : ''} —{' '}
+                      {s.motivo_edicion}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -394,6 +492,94 @@ export default function VerPerfilTrabajador() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {vacacionActiva && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          onClick={cerrarModalVacacion}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-[#153A5B] mb-1">
+              {modoVacacion === 'editar' ? 'Editar fechas de vacaciones' : 'Cancelar vacaciones'}
+            </p>
+            <p className="text-xs text-slate-500 mb-4">
+              Actualmente: {vacacionActiva.fecha_desde} → {vacacionActiva.fecha_hasta} (
+              {vacacionActiva.dias_habiles} días hábiles)
+            </p>
+
+            {modoVacacion === 'editar' && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="text-xs text-slate-500">Desde</label>
+                  <input
+                    type="date"
+                    value={formVacacion.fecha_desde}
+                    onChange={(e) => setFormVacacion({ ...formVacacion, fecha_desde: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500">Hasta</label>
+                  <input
+                    type="date"
+                    value={formVacacion.fecha_hasta}
+                    onChange={(e) => setFormVacacion({ ...formVacacion, fecha_hasta: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            )}
+
+            {modoVacacion === 'cancelar' && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                La solicitud quedará marcada como "cancelada" (no se borra) y el saldo de vacaciones se
+                libera automáticamente.
+              </p>
+            )}
+
+            <label className="text-xs text-slate-500">
+              Motivo {modoVacacion === 'cancelar' ? '(obligatorio)' : '(por qué se corrigen las fechas)'}
+            </label>
+            <textarea
+              value={formVacacion.motivo}
+              onChange={(e) => setFormVacacion({ ...formVacacion, motivo: e.target.value })}
+              placeholder="Ej: emergencia familiar, se reprograma por necesidad operativa…"
+              rows={3}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-1"
+            />
+            <p className="text-[10px] text-slate-400 mb-3">
+              {trabajador?.nombre_completo.split(' ')[0]} va a recibir una notificación con este motivo.
+            </p>
+
+            {errorVacacion && <p className="text-xs text-red-600 mb-3">{errorVacacion}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={cerrarModalVacacion}
+                className="flex-1 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg py-2"
+              >
+                Volver
+              </button>
+              <button
+                onClick={guardarVacacion}
+                disabled={guardandoVacacion}
+                className={`flex-1 text-xs font-bold text-white rounded-lg py-2 disabled:opacity-60 ${
+                  modoVacacion === 'cancelar' ? 'bg-red-600' : 'bg-[#0F5C8C]'
+                }`}
+              >
+                {guardandoVacacion
+                  ? 'Guardando…'
+                  : modoVacacion === 'cancelar'
+                  ? 'Confirmar cancelación'
+                  : 'Guardar cambios'}
+              </button>
             </div>
           </div>
         </div>
