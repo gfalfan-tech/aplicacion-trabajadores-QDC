@@ -363,7 +363,12 @@ export default function TrabajadoresRRHH() {
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500">Días progresivos a la fecha</label>
+              <label className="text-xs text-slate-500">
+                Días progresivos a la fecha
+                <span className="block text-[10px] text-slate-400 font-normal">
+                  Desde hoy, se suma 1 día más cada 3 años
+                </span>
+              </label>
               <input
                 type="number"
                 step="0.5"
@@ -572,7 +577,12 @@ export default function TrabajadoresRRHH() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500">Días progresivos a la fecha</label>
+                    <label className="text-xs text-slate-500">
+                Días progresivos a la fecha
+                <span className="block text-[10px] text-slate-400 font-normal">
+                  Desde hoy, se suma 1 día más cada 3 años
+                </span>
+              </label>
                     <input
                       type="number"
                       step="0.5"
