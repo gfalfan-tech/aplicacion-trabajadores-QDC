@@ -134,8 +134,12 @@ export default function MensajesPage() {
 
   async function cargarDirectorio() {
     if (!perfil) return;
+    // Usa la vista pública del directorio (no la tabla trabajadores
+    // directamente) para que cualquiera pueda ver e iniciar un chat con
+    // cualquier otro colaborador, sin depender de la política RLS
+    // restrictiva que tiene la tabla base.
     const { data } = await supabase
-      .from('trabajadores')
+      .from('v_directorio_trabajadores')
       .select('id, nombre_completo, cargo, avatar_url')
       .neq('id', perfil.id)
       .order('nombre_completo');
