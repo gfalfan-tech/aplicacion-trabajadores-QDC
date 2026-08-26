@@ -17,6 +17,9 @@ export default function AsistenciaRRHH() {
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState('');
   const [periodos, setPeriodos] = useState([]);
+  const [confirmando, setConfirmando] = useState(null); // clave del período a confirmar
+  const [eliminando, setEliminando] = useState(null);
+  const [errorEliminar, setErrorEliminar] = useState('');
   const fileInputRef = useRef(null);
 
   async function cargarPeriodos() {
@@ -24,21 +27,49 @@ export default function AsistenciaRRHH() {
       .from('asistencia_mensual')
       .select('periodo_desde, periodo_hasta')
       .order('periodo_desde', { ascending: false });
-    const vistos = new Set();
-    const lista = [];
+    const conteo = new Map();
     (data || []).forEach((r) => {
       const clave = `${r.periodo_desde}_${r.periodo_hasta}`;
-      if (!vistos.has(clave)) {
-        vistos.add(clave);
-        lista.push(r);
+      const actual = conteo.get(clave);
+      if (actual) {
+        actual.trabajadores += 1;
+      } else {
+        conteo.set(clave, {
+          periodo_desde: r.periodo_desde,
+          periodo_hasta: r.periodo_hasta,
+          trabajadores: 1,
+        });
       }
     });
-    setPeriodos(lista);
+    setPeriodos(Array.from(conteo.values()));
   }
 
   useEffect(() => {
     cargarPeriodos();
   }, []);
+
+  async function eliminarPeriodo(p) {
+    const clave = p.periodo_desde + p.periodo_hasta;
+    setEliminando(clave);
+    setErrorEliminar('');
+    try {
+      const { data: sesion } = await supabase.auth.getSession();
+      const token = sesion?.session?.access_token;
+      const resp = await fetch('/api/admin/eliminar-asistencia', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ periodo_desde: p.periodo_desde, periodo_hasta: p.periodo_hasta }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json.error || 'No se pudo eliminar.');
+      setConfirmando(null);
+      await cargarPeriodos();
+    } catch (err) {
+      setErrorEliminar(err.message);
+    } finally {
+      setEliminando(null);
+    }
+  }
 
   async function subir(e) {
     const file = e.target.files?.[0];
@@ -172,18 +203,60 @@ export default function AsistenciaRRHH() {
       )}
 
       <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">PERÍODOS CARGADOS</p>
+      {errorEliminar && <p className="text-xs text-red-600 mb-2">{errorEliminar}</p>}
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
         {periodos.length === 0 && (
           <p className="text-sm text-slate-400 p-4">Aún no se ha subido ningún reporte de asistencia.</p>
         )}
-        {periodos.map((p) => (
-          <div key={p.periodo_desde + p.periodo_hasta} className="px-4 py-3">
-            <p className="text-sm font-bold text-[#153A5B]">
-              {p.periodo_desde} → {p.periodo_hasta}
-            </p>
-          </div>
-        ))}
+        {periodos.map((p) => {
+          const clave = p.periodo_desde + p.periodo_hasta;
+          const confirmandoEste = confirmando === clave;
+          const eliminandoEste = eliminando === clave;
+          return (
+            <div key={clave} className="px-4 py-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-[#153A5B]">
+                  {p.periodo_desde} → {p.periodo_hasta}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {p.trabajadores} trabajador{p.trabajadores === 1 ? '' : 'es'}
+                </p>
+              </div>
+              {confirmandoEste ? (
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-slate-500">¿Eliminar este período?</span>
+                  <button
+                    onClick={() => eliminarPeriodo(p)}
+                    disabled={eliminandoEste}
+                    className="text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg px-3 py-1.5 disabled:opacity-60"
+                  >
+                    {eliminandoEste ? 'Eliminando…' : 'Sí, eliminar'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmando(null)}
+                    disabled={eliminandoEste}
+                    className="text-xs font-bold text-slate-500 hover:text-slate-700"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmando(clave)}
+                  className="shrink-0 text-xs font-bold text-red-600 hover:text-red-700 rounded-lg px-3 py-1.5 border border-red-200 hover:bg-red-50"
+                >
+                  🗑️ Eliminar
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
+      <p className="text-xs text-slate-400 mt-3">
+        Eliminar un período borra la asistencia guardada de todos los trabajadores para ese rango de
+        fechas exacto. Úsalo si subiste un archivo con el rango de fechas equivocado — luego puedes
+        volver a subir el archivo correcto.
+      </p>
     </AppShell>
   );
 }
