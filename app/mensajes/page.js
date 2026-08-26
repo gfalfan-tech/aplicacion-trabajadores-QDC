@@ -47,7 +47,7 @@ function MensajesPageContenido() {
     setVistaGuardada(window.localStorage.getItem(CLAVE_ULTIMA_VISTA));
   }, []);
   const links = esRRHH && vistaGuardada !== 'trabajador' ? rrhhLinks : trabajadorLinks;
-  const { conversaciones, recargar } = useConversaciones(perfil?.id);
+  const { conversaciones, cargando: cargandoConversaciones, recargar } = useConversaciones(perfil?.id);
 
   const [activaId, setActivaId] = useState(null);
   const [vistaMovilLista, setVistaMovilLista] = useState(true);
@@ -222,13 +222,16 @@ function MensajesPageContenido() {
   // Si llegamos con ?con=<id> (por ejemplo desde "Chatear" en el
   // Directorio), abre ese chat privado automáticamente y limpia el
   // parámetro de la URL para no repetirlo si se recarga la página.
+  // Ojo: hay que esperar a que "conversaciones" termine de cargar, si no
+  // iniciarPrivado() no encuentra el chat que ya existía con esa persona
+  // (la lista todavía está vacía) y crea uno nuevo por error.
   useEffect(() => {
-    if (!chatConId || !perfil) return;
+    if (!chatConId || !perfil || cargandoConversaciones) return;
     if (chatConId === perfil.id) return;
     iniciarPrivado(chatConId);
     router.replace('/mensajes');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatConId, perfil?.id]);
+  }, [chatConId, perfil?.id, cargandoConversaciones]);
 
   async function crearGrupo(e) {
     e.preventDefault();
