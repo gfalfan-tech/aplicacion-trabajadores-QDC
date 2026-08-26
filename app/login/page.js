@@ -16,10 +16,28 @@ export default function Login() {
     e.preventDefault();
     setCargando(true);
     setError('');
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
     setCargando(false);
-    if (error) setError('Correo o contraseña incorrectos.');
-    else router.replace('/');
+    if (error) {
+      // Mensaje específico según la causa real, para poder diagnosticar
+      // (antes decía siempre "Correo o contraseña incorrectos", lo que
+      // ocultaba casos como cuenta no confirmada o demasiados intentos).
+      const msg = error.message || '';
+      if (msg.includes('Invalid login credentials')) {
+        setError('Correo o contraseña incorrectos.');
+      } else if (msg.includes('Email not confirmed')) {
+        setError('Tu cuenta aún no está confirmada. Contacta a RR.HH.');
+      } else if (msg.includes('rate limit') || msg.includes('Too many')) {
+        setError('Demasiados intentos. Espera un minuto e inténtalo de nuevo.');
+      } else {
+        setError('No se pudo ingresar: ' + msg);
+      }
+    } else {
+      router.replace('/');
+    }
   }
 
   return (
