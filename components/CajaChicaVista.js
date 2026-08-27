@@ -14,6 +14,8 @@ import {
 } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
 import { generarPdfReciboCajaChica } from '@/lib/reciboCajaChicaPdf';
+import { verPdfSolicitudCajaChica } from '@/lib/verSolicitudCajaChicaPdf';
+import { verPdfDesgloseCajaChica, descargarPdfDesgloseCajaChica } from '@/lib/desgloseCajaChicaPdf';
 import ModalRendirSolicitud from '@/components/ModalRendirSolicitud';
 import ModalReporteCajaChica from '@/components/ModalReporteCajaChica';
 
@@ -285,7 +287,13 @@ export default function CajaChicaVista() {
                     <p className="text-xs text-slate-500 mb-2">
                       {s.articulo} — {s.razon}
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => verPdfSolicitudCajaChica(s)}
+                        className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-1.5"
+                      >
+                        📄 Ver solicitud
+                      </button>
                       <button
                         onClick={() => accion(s.id, 'aprobar')}
                         className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-1.5"
@@ -363,12 +371,26 @@ export default function CajaChicaVista() {
                           Saldo a entregar: {formatearCLP(-diferencia)}
                         </p>
                       )}
-                      <button
-                        onClick={() => accion(s.id, 'confirmar_rendicion')}
-                        className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-1.5"
-                      >
-                        Confirmar rendición
-                      </button>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => verPdfDesgloseCajaChica(s)}
+                          className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-1.5"
+                        >
+                          📄 Ver desglose
+                        </button>
+                        <button
+                          onClick={() => descargarPdfDesgloseCajaChica(s)}
+                          className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-1.5"
+                        >
+                          ⬇️ Descargar
+                        </button>
+                        <button
+                          onClick={() => accion(s.id, 'confirmar_rendicion')}
+                          className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-1.5"
+                        >
+                          Confirmar rendición
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -399,6 +421,22 @@ export default function CajaChicaVista() {
                   >
                     Rendir cuentas
                   </button>
+                )}
+                {(s.estado === 'rendicion_ingresada' || s.estado === 'rendida') && (
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => verPdfDesgloseCajaChica(s)}
+                      className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-1.5"
+                    >
+                      📄 Ver desglose
+                    </button>
+                    <button
+                      onClick={() => descargarPdfDesgloseCajaChica(s)}
+                      className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-1.5"
+                    >
+                      ⬇️ Descargar
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

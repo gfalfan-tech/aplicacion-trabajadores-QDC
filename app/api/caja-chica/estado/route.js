@@ -37,7 +37,7 @@ export async function GET(req) {
 
   const { data: trabajadores } = await admin
     .from('trabajadores')
-    .select('id, nombre_completo, cargo, jefe_directo_id');
+    .select('id, nombre_completo, cargo, jefe_directo_id, areas(nombre)');
   const nombrePorId = new Map((trabajadores || []).map((t) => [t.id, t.nombre_completo]));
   const trabajadorPorId = new Map((trabajadores || []).map((t) => [t.id, t]));
 
@@ -69,9 +69,12 @@ export async function GET(req) {
 
   const solicitudesEnriquecidas = solicitudes.map((s) => {
     const aprobadorEsperadoId = resolverAprobadorEsperado(trabajadorPorId.get(s.solicitante_id), rolesPorTrabajador);
+    const solicitante = trabajadorPorId.get(s.solicitante_id);
     return {
       ...s,
       solicitante_nombre: nombrePorId.get(s.solicitante_id) || '—',
+      solicitante_cargo: solicitante?.cargo || null,
+      solicitante_area: solicitante?.areas?.nombre || null,
       aprobador_nombre: s.aprobador_id ? nombrePorId.get(s.aprobador_id) || '—' : null,
       entregado_por_nombre: s.entregado_por ? nombrePorId.get(s.entregado_por) || '—' : null,
       rendicion_confirmada_por_nombre: s.rendicion_confirmada_por
