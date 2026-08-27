@@ -70,21 +70,52 @@ function MensajesPageContenido() {
 
   const activa = conversaciones.find((c) => c.conversacion_id === activaId);
 
+  // El nombre/avatar de cada trabajador se busca aparte, en la vista
+  // pública del directorio (no con un JOIN directo a "trabajadores")
+  // porque esta pantalla la puede abrir cualquiera y la tabla base
+  // tiene una política RLS restrictiva — con el JOIN directo, si quien
+  // mira no tenía permiso para "ver" la ficha del otro ahí, el nombre
+  // llegaba vacío y se veía el genérico "Trabajador" en vez del nombre
+  // real (aunque esa persona sí apareciera bien en el Directorio).
+  async function buscarNombres(ids) {
+    const unicos = [...new Set(ids)].filter(Boolean);
+    if (unicos.length === 0) return new Map();
+    const { data } = await supabase
+      .from('v_directorio_trabajadores')
+      .select('id, nombre_completo, avatar_url')
+      .in('id', unicos);
+    return new Map((data || []).map((t) => [t.id, t]));
+  }
+
   async function cargarMensajes(id) {
     const { data } = await supabase
       .from('mensajes')
-      .select('id, texto, creado_en, trabajador_id, trabajadores(nombre_completo, avatar_url)')
+      .select('id, texto, creado_en, trabajador_id')
       .eq('conversacion_id', id)
       .order('creado_en', { ascending: true });
-    setMensajes(data || []);
+    const filas = data || [];
+    const nombres = await buscarNombres(filas.map((m) => m.trabajador_id));
+    setMensajes(
+      filas.map((m) => ({
+        ...m,
+        trabajadores: nombres.get(m.trabajador_id) || null,
+      }))
+    );
   }
 
   async function cargarParticipantes(id) {
     const { data } = await supabase
       .from('conversaciones_participantes')
-      .select('trabajador_id, es_admin, trabajadores(nombre_completo, avatar_url)')
+      .select('trabajador_id, es_admin')
       .eq('conversacion_id', id);
-    setParticipantes(data || []);
+    const filas = data || [];
+    const nombres = await buscarNombres(filas.map((p) => p.trabajador_id));
+    setParticipantes(
+      filas.map((p) => ({
+        ...p,
+        trabajadores: nombres.get(p.trabajador_id) || null,
+      }))
+    );
   }
 
   async function marcarLeido(id) {
