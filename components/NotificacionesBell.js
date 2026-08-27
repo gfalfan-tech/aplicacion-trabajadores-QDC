@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useNotificaciones } from '@/lib/useNotificaciones';
 import { rutaDeNotificacion } from '@/lib/notificacionesRuta';
 
 function tiempoRelativo(fecha) {
@@ -16,9 +15,14 @@ function tiempoRelativo(fecha) {
   return `hace ${dias} d`;
 }
 
-export default function NotificacionesBell({ trabajadorId, esRRHH = false }) {
+export default function NotificacionesBell({
+  esRRHH = false,
+  notificaciones = [],
+  noLeidas = 0,
+  marcarLeida,
+  marcarTodasLeidas,
+}) {
   const router = useRouter();
-  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones(trabajadorId);
   const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
 

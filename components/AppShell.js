@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
 import NotificacionesBell from '@/components/NotificacionesBell';
 import { useConversaciones } from '@/lib/useConversaciones';
+import { useNotificaciones } from '@/lib/useNotificaciones';
+import { useBadgeApp } from '@/lib/useBadgeApp';
 import Avatar from '@/components/Avatar';
 
 const CLAVE_COLAPSADO = 'qdc_menu_colapsado';
@@ -19,6 +21,13 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   const [colapsado, setColapsado] = useState(false);
   const [mostrarMas, setMostrarMas] = useState(false);
   const { totalNoLeidos } = useConversaciones(perfil?.id);
+  const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones(perfil?.id);
+
+  // Número que se muestra fuera de la app, sobre el ícono (mensajes +
+  // notificaciones sin leer, lo mismo que ya se ve como globitos rojos
+  // acá adentro). No cambia ningún funcionamiento existente, solo lo
+  // refleja hacia afuera.
+  useBadgeApp(totalNoLeidos + noLeidas);
 
   useEffect(() => {
     const guardado = window.localStorage.getItem(CLAVE_COLAPSADO);
@@ -190,7 +199,13 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
         <div className="hidden md:flex bg-white border-b border-slate-200 px-6 py-3 items-center justify-between sticky top-0 z-10">
           <h1 className="text-lg font-bold text-[#153A5B]">{titulo}</h1>
           <div className="flex items-center gap-3">
-            <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
+            <NotificacionesBell
+              esRRHH={esRRHH}
+              notificaciones={notificaciones}
+              noLeidas={noLeidas}
+              marcarLeida={marcarLeida}
+              marcarTodasLeidas={marcarTodasLeidas}
+            />
             <Avatar url={perfil.avatar_url} nombre={perfil.nombre_completo} size={32} />
           </div>
         </div>
@@ -210,7 +225,13 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
                 ⇄
               </Link>
             )}
-            <NotificacionesBell trabajadorId={perfil.id} esRRHH={esRRHH} />
+            <NotificacionesBell
+              esRRHH={esRRHH}
+              notificaciones={notificaciones}
+              noLeidas={noLeidas}
+              marcarLeida={marcarLeida}
+              marcarTodasLeidas={marcarTodasLeidas}
+            />
             <Avatar url={perfil.avatar_url} nombre={perfil.nombre_completo} size={32} />
           </div>
         </div>

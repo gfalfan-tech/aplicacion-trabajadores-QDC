@@ -61,11 +61,21 @@ export async function POST(req) {
   const esRRHH = (rolesData || []).some((r) => r.rol === 'rrhh' || r.rol === 'administrador');
   const url = rutaDeNotificacion(record, { esRRHH }) || '/';
 
+  // Cuántas notificaciones sin leer tiene la persona en este momento —
+  // viaja en el push para que el service worker pueda mostrar ese número
+  // como "badge" sobre el ícono de la app, incluso con la app cerrada.
+  const { count: badgeCount } = await admin
+    .from('notificaciones')
+    .select('*', { count: 'exact', head: true })
+    .eq('trabajador_id', record.trabajador_id)
+    .eq('leida', false);
+
   const payload = JSON.stringify({
     titulo: record.titulo || 'Portal QDC',
     cuerpo: record.cuerpo || '',
     url,
     tag: record.relacionado_tipo || undefined,
+    badgeCount: badgeCount || 0,
   });
 
   let enviados = 0;

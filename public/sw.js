@@ -29,7 +29,26 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || undefined,
   };
 
-  event.waitUntil(self.registration.showNotification(titulo, opciones));
+  // Además de mostrar la notificación, si el servidor mandó cuántas
+  // notificaciones sin leer tiene la persona, se refleja ese número en el
+  // "badge" del ícono de la app (funciona incluso con la app cerrada). Si
+  // el navegador no soporta la Badging API, esto simplemente no hace nada.
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(titulo, opciones);
+      if (typeof payload.badgeCount === 'number' && 'setAppBadge' in self.navigator) {
+        try {
+          if (payload.badgeCount > 0) {
+            await self.navigator.setAppBadge(payload.badgeCount);
+          } else {
+            await self.navigator.clearAppBadge();
+          }
+        } catch (e) {
+          // silencioso
+        }
+      }
+    })()
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
