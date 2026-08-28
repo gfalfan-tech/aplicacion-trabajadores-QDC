@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
 
-const ROLES_VALIDOS = ['trabajador', 'jefatura', 'rrhh', 'administrador'];
+const ROLES_VALIDOS = ['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos'];
 
 // Reemplaza los roles de un trabajador (borra los que tenía y deja
 // exactamente los que llegan en `roles`).
