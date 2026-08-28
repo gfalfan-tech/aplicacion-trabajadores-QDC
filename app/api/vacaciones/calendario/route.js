@@ -78,7 +78,9 @@ export async function GET(req) {
       .from('solicitudes_vacaciones')
       .select('id, trabajador_id, fecha_desde, fecha_hasta, dias_habiles, estado')
       .in('trabajador_id', idsTrabajadores)
-      .in('estado', ['aprobada', 'pendiente'])
+      // 'aprobada_jefe' se pinta igual que 'pendiente' en el calendario
+      // (CalendarioVacaciones solo distingue "aprobada" de todo el resto).
+      .in('estado', ['aprobada', 'aprobada_jefe', 'pendiente'])
       .lte('fecha_desde', ultimoDia)
       .gte('fecha_hasta', primerDia),
     admin.from('v_vacaciones_saldo').select('*').in('trabajador_id', idsTrabajadores),

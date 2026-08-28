@@ -78,7 +78,10 @@ export async function GET(req) {
     .from('solicitudes_vacaciones')
     .select('id, trabajador_id, fecha_desde, fecha_hasta, estado, trabajadores(nombre_completo)')
     .in('trabajador_id', idsCompañeros)
-    .in('estado', ['aprobada', 'pendiente'])
+    // 'aprobada_jefe' (a la espera de la segunda firma de RR.HH.) también
+    // cuenta como cruce posible — es una vacación con altas chances de
+    // quedar aprobada, no algo que se pueda ignorar todavía.
+    .in('estado', ['aprobada', 'aprobada_jefe', 'pendiente'])
     .lte('fecha_desde', solicitud.fecha_hasta)
     .gte('fecha_hasta', solicitud.fecha_desde);
 

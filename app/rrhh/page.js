@@ -8,7 +8,11 @@ import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
 import AlertaPendientes from '@/components/AlertaPendientes';
-import { obtenerTraslapes, resolverSolicitudVacaciones } from '@/lib/vacacionesEquipo';
+import {
+  obtenerTraslapes,
+  obtenerVacacionesPendientesEquipo,
+  resolverSolicitudVacaciones,
+} from '@/lib/vacacionesEquipo';
 
 export default function RRHHHome() {
   const { perfil } = useAuth();
@@ -30,11 +34,12 @@ export default function RRHHHome() {
       .eq('estado', 'pendiente')
       .order('created_at');
 
-    const { data: vacaciones } = await supabase
-      .from('solicitudes_vacaciones')
-      .select('*, trabajadores(nombre_completo)')
-      .eq('estado', 'pendiente')
-      .order('created_at');
+    // Con la doble aprobación de vacaciones, lo que le toca resolver a
+    // RR.HH. ya no es un simple ".eq('estado', 'pendiente')" — puede ser
+    // 'pendiente' (sin jefe directo válido) o 'aprobada_jefe' (segunda
+    // firma). /api/vacaciones/pendientes ya tiene esa lógica, así que se
+    // reutiliza en vez de duplicarla acá.
+    const vacaciones = await obtenerVacacionesPendientesEquipo().catch(() => []);
 
     setKpi({
       activos: activos || 0,
@@ -43,8 +48,8 @@ export default function RRHHHome() {
     });
 
     setPendientes([
-      ...(permisos || []).map((p) => ({ ...p, origen: 'permiso' })),
-      ...(vacaciones || []).map((v) => ({ ...v, origen: 'vacaciones' })),
+      ...(permisos || []).map((p) => ({ ...p, origen: 'permiso', nombre: p.trabajadores?.nombre_completo })),
+      ...(vacaciones || []).map((v) => ({ ...v, origen: 'vacaciones', nombre: v.trabajador_nombre })),
     ]);
   }
 
@@ -175,7 +180,7 @@ export default function RRHHHome() {
           <div key={item.origen + item.id} className="flex items-center justify-between px-4 py-3 gap-3">
             <div>
               <p className="text-sm font-bold text-[#153A5B]">
-                {item.trabajadores?.nombre_completo} —{' '}
+                {item.nombre} —{' '}
                 {item.origen === 'permiso'
                   ? item.tipos_permiso?.nombre
                   : `Vacaciones (${item.dias_habiles} días)`}
@@ -186,6 +191,9 @@ export default function RRHHHome() {
                   <> · {item.hora_desde.slice(0, 5)} a {item.hora_hasta.slice(0, 5)} hrs</>
                 )}
               </p>
+              {item.estado === 'aprobada_jefe' && (
+                <p className="text-[10px] text-blue-700 mt-0.5">Ya la aprobó su jefe directo — falta tu firma.</p>
+              )}
             </div>
             <div className="flex gap-2 shrink-0">
               <button

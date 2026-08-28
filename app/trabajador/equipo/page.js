@@ -299,39 +299,46 @@ export default function MiEquipo() {
             <p className="text-xs text-red-600 mb-2">{errorVacacionesPendientes}</p>
           )}
 
-          {vacacionesPendientes?.length > 0 && (
+          {/* RR.HH. ve dos grupos: las que ya aprobó el jefe directo (les toca su
+              firma) y las que están 'pendiente' porque no hay jefe directo válido
+              (RR.HH. es la única aprobación, como antes). Jefatura solo ve las
+              suyas en 'pendiente', así que siempre caen en el segundo grupo. */}
+          {vacacionesPendientes?.some((s) => s.estado === 'aprobada_jefe') && (
+            <>
+              <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
+                VACACIONES · A LA ESPERA DE TU FIRMA (RR.HH.)
+              </p>
+              <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
+                {vacacionesPendientes
+                  .filter((s) => s.estado === 'aprobada_jefe')
+                  .map((s) => (
+                    <TarjetaVacacionPendiente
+                      key={s.id}
+                      s={s}
+                      onAprobar={() => pedirConfirmacion(s)}
+                      onRechazar={() => confirmarResolucion(s, 'rechazada')}
+                    />
+                  ))}
+              </div>
+            </>
+          )}
+
+          {vacacionesPendientes?.some((s) => s.estado === 'pendiente') && (
             <>
               <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
                 VACACIONES PENDIENTES DE TU EQUIPO
               </p>
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
-                {vacacionesPendientes.map((s) => (
-                  <div key={s.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-bold text-[#153A5B]">{s.trabajador_nombre}</p>
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
-                        {s.dias_habiles} días hábiles
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mb-2">
-                      {s.fecha_desde} → {s.fecha_hasta}
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => pedirConfirmacion(s)}
-                        className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-2"
-                      >
-                        Aprobar
-                      </button>
-                      <button
-                        onClick={() => confirmarResolucion(s, 'rechazada')}
-                        className="text-xs font-bold text-red-800 bg-red-100 rounded-lg px-3 py-2"
-                      >
-                        Rechazar
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {vacacionesPendientes
+                  .filter((s) => s.estado === 'pendiente')
+                  .map((s) => (
+                    <TarjetaVacacionPendiente
+                      key={s.id}
+                      s={s}
+                      onAprobar={() => pedirConfirmacion(s)}
+                      onRechazar={() => confirmarResolucion(s, 'rechazada')}
+                    />
+                  ))}
               </div>
             </>
           )}
@@ -372,5 +379,38 @@ export default function MiEquipo() {
         />
       )}
     </AppShell>
+  );
+}
+
+function TarjetaVacacionPendiente({ s, onAprobar, onRechazar }) {
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-bold text-[#153A5B]">{s.trabajador_nombre}</p>
+        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
+          {s.dias_habiles} días hábiles
+        </span>
+      </div>
+      <p className="text-xs text-slate-500 mb-2">
+        {s.fecha_desde} → {s.fecha_hasta}
+      </p>
+      {s.estado === 'aprobada_jefe' && (
+        <p className="text-[10px] text-blue-700 mb-2">Ya la aprobó su jefe directo — falta tu firma.</p>
+      )}
+      <div className="flex gap-2">
+        <button
+          onClick={onAprobar}
+          className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-2"
+        >
+          Aprobar
+        </button>
+        <button
+          onClick={onRechazar}
+          className="text-xs font-bold text-red-800 bg-red-100 rounded-lg px-3 py-2"
+        >
+          Rechazar
+        </button>
+      </div>
+    </div>
   );
 }

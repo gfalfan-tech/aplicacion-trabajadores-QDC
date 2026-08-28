@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Avatar from '@/components/Avatar';
 import { armarGrillaMes, nombreMes, sumarMes } from '@/lib/vacacionesEquipo';
+import { estadoVacacionesLabel } from '@/lib/estadoVacaciones';
 
 const DIAS_SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -122,7 +123,7 @@ export default function CalendarioVacaciones({ mes, solicitudes, trabajadoresPor
                         s.estado === 'aprobada' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {s.estado}
+                      {estadoVacacionesLabel(s.estado)}
                     </span>
                   </div>
                 );

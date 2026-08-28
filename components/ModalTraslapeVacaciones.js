@@ -1,8 +1,11 @@
 'use client';
 
+import { estadoVacacionesLabel } from '@/lib/estadoVacaciones';
+
 // Modal de advertencia: se muestra antes de aprobar una solicitud de
 // vacaciones cuando otras personas del área ya tienen vacaciones
-// aprobadas/pendientes que se cruzan con las mismas fechas.
+// aprobadas/pendientes (o aprobadas por su jefe, a la espera de RR.HH.) que
+// se cruzan con las mismas fechas.
 export default function ModalTraslapeVacaciones({ traslapes, onConfirmar, onCancelar, confirmando }) {
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -26,7 +29,7 @@ export default function ModalTraslapeVacaciones({ traslapes, onConfirmar, onCanc
                   t.estado === 'aprobada' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
                 }`}
               >
-                {t.estado}
+                {estadoVacacionesLabel(t.estado)}
               </span>
             </div>
           ))}

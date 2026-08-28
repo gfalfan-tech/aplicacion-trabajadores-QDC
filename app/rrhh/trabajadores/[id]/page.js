@@ -14,6 +14,7 @@ import {
 } from '@/lib/solicitudPdf';
 import Avatar from '@/components/Avatar';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
+import { estadoVacacionesLabel, estadoVacacionesStyle } from '@/lib/estadoVacaciones';
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -93,7 +94,7 @@ export default function VerPerfilTrabajador() {
           .order('created_at', { ascending: false }),
         supabase
           .from('solicitudes_vacaciones')
-          .select('*')
+          .select('*, jefe_aprobador:aprobado_por_jefe(nombre_completo)')
           .eq('trabajador_id', id)
           .order('created_at', { ascending: false }),
         supabase
@@ -158,12 +159,12 @@ export default function VerPerfilTrabajador() {
 
   async function verPdfVacaciones(s) {
     if (!trabajador) return;
-    await abrirPdfVacaciones(s, trabajador);
+    await abrirPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, trabajador);
   }
 
   async function descargarVacaciones(s) {
     if (!trabajador) return;
-    await descargarPdfVacaciones(s, trabajador);
+    await descargarPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, trabajador);
   }
 
   async function recargarVacaciones() {
@@ -171,7 +172,7 @@ export default function VerPerfilTrabajador() {
       supabase.from('v_vacaciones_saldo').select('*').eq('trabajador_id', id).maybeSingle(),
       supabase
         .from('solicitudes_vacaciones')
-        .select('*')
+        .select('*, jefe_aprobador:aprobado_por_jefe(nombre_completo)')
         .eq('trabajador_id', id)
         .order('created_at', { ascending: false }),
     ]);
@@ -355,9 +356,9 @@ export default function VerPerfilTrabajador() {
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-[#153A5B]">{s.dias_habiles} días hábiles</p>
                     <span
-                      className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoStyleSolicitud[s.estado]}`}
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoVacacionesStyle[s.estado]}`}
                     >
-                      {s.estado}
+                      {estadoVacacionesLabel(s.estado)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">

@@ -7,13 +7,15 @@ import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import { verPdfVacaciones, descargarPdfVacaciones } from '@/lib/solicitudPdf';
 import { calcularDiasHabiles } from '@/lib/diasHabiles';
+import { estadoVacacionesLabel, estadoVacacionesStyle, fechasResolucionVacaciones } from '@/lib/estadoVacaciones';
 
-const estadoStyle = {
-  pendiente: 'bg-amber-100 text-amber-800',
-  aprobada: 'bg-green-100 text-green-800',
-  rechazada: 'bg-red-100 text-red-800',
-  cancelada: 'bg-slate-100 text-slate-600',
-};
+function formatFechaHora(fechaISO) {
+  return new Date(fechaISO).toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
 
 export default function Vacaciones() {
   const { perfil } = useAuth();
@@ -45,9 +47,11 @@ export default function Vacaciones() {
       .eq('trabajador_id', perfil.id)
       .maybeSingle();
     setSaldo(s);
+    // El join a jefe_aprobador (por aprobado_por_jefe) trae el nombre del
+    // jefe directo que dio la primera firma, para el PDF ya aprobado.
     const { data: l } = await supabase
       .from('solicitudes_vacaciones')
-      .select('*')
+      .select('*, jefe_aprobador:aprobado_por_jefe(nombre_completo)')
       .eq('trabajador_id', perfil.id)
       .order('created_at', { ascending: false });
     setLista(l || []);
@@ -88,11 +92,11 @@ export default function Vacaciones() {
   }
 
   async function verPdf(s) {
-    await verPdfVacaciones(s, perfil);
+    await verPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, perfil);
   }
 
   async function descargarPdf(s) {
-    await descargarPdfVacaciones(s, perfil);
+    await descargarPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, perfil);
   }
 
   if (!perfil) return null;
@@ -158,13 +162,22 @@ export default function Vacaciones() {
           <div key={s.id} className="px-4 py-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-[#153A5B]">{s.dias_habiles} días hábiles</p>
-              <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoStyle[s.estado]}`}>
-                {s.estado}
+              <span
+                className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoVacacionesStyle[s.estado]}`}
+              >
+                {estadoVacacionesLabel(s.estado)}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               {s.fecha_desde} → {s.fecha_hasta}
             </p>
+            <div className="mt-2 space-y-0.5">
+              {fechasResolucionVacaciones(s, perfil.jefe_directo_id).map((f) => (
+                <p key={f.etiqueta} className="text-[10px] text-slate-400">
+                  {f.etiqueta}: {formatFechaHora(f.fecha)}
+                </p>
+              ))}
+            </div>
             <div className="mt-2 flex gap-2">
               <button
                 onClick={() => verPdf(s)}

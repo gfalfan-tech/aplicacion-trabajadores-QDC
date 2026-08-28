@@ -37,8 +37,52 @@ export async function GET(req) {
     return count || 0;
   }
 
+  // Vacaciones tiene doble aprobación: para jefatura, "pendiente" (lo suyo,
+  // como antes, sin cambios). Para RR.HH. hay que contar solo lo que
+  // realmente le toca a RR.HH. resolver: 'pendiente' de trabajadores SIN
+  // jefe directo válido (ahí RR.HH. es la única aprobación) más TODAS las
+  // que están en 'aprobada_jefe' (segunda firma) — así el número no incluye
+  // solicitudes que todavía dependen del jefe directo de esa persona.
+  async function contarVacaciones() {
+    if (!esRRHH) {
+      return contar('solicitudes_vacaciones', 'estado', 'pendiente', 'trabajador_id');
+    }
+
+    const { count: segundaFirma } = await admin
+      .from('solicitudes_vacaciones')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'aprobada_jefe');
+
+    const { data: trabajadores } = await admin.from('trabajadores').select('id, jefe_directo_id');
+    const idsJefes = [...new Set((trabajadores || []).map((t) => t.jefe_directo_id).filter(Boolean))];
+    let jefesValidos = new Set();
+    if (idsJefes.length > 0) {
+      const { data: rolesJefes } = await admin
+        .from('trabajador_roles')
+        .select('trabajador_id')
+        .in('trabajador_id', idsJefes)
+        .in('rol', ['jefatura', 'rrhh', 'administrador']);
+      jefesValidos = new Set((rolesJefes || []).map((r) => r.trabajador_id));
+    }
+    const idsSinJefeValido = (trabajadores || [])
+      .filter((t) => !t.jefe_directo_id || !jefesValidos.has(t.jefe_directo_id))
+      .map((t) => t.id);
+
+    let pendientesSinJefe = 0;
+    if (idsSinJefeValido.length > 0) {
+      const { count } = await admin
+        .from('solicitudes_vacaciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente')
+        .in('trabajador_id', idsSinJefeValido);
+      pendientesSinJefe = count || 0;
+    }
+
+    return (segundaFirma || 0) + pendientesSinJefe;
+  }
+
   const [vacaciones, permisos, certificados, cajaChica] = await Promise.all([
-    contar('solicitudes_vacaciones', 'estado', 'pendiente', 'trabajador_id'),
+    contarVacaciones(),
     contar('solicitudes_permiso', 'estado', 'pendiente', 'trabajador_id'),
     esRRHH ? contar('certificados_antiguedad', 'estado', 'solicitado', 'trabajador_id') : Promise.resolve(0),
     contar('caja_chica_solicitudes', 'estado', 'pendiente', 'solicitante_id'),
