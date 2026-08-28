@@ -27,6 +27,7 @@ import {
   formatearMonto,
   totalLineas,
   fechasResolucionRendicion,
+  mensajeDiferencia,
 } from '@/lib/rendicionGastosLogica';
 import { verPdfRendicionGastos, descargarPdfRendicionGastos } from '@/lib/rendicionGastosPdf';
 
@@ -344,6 +345,10 @@ export default function RendicionGastosDetalle() {
               <p className="text-[10px] text-slate-500">Diferencia</p>
             </div>
           </div>
+
+          <p className={`text-xs font-bold mb-4 ${diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+            {mensajeDiferencia(diferencia, moneda)}
+          </p>
 
           <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">LÍNEAS DE GASTO</p>
           <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-4">
