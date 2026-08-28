@@ -32,7 +32,8 @@ function formatearFechaCorta(fechaISO) {
 }
 
 export default function TrabajadorHome() {
-  const { perfil, esJefatura, esRRHH } = useAuth();
+  const { perfil, roles, esJefatura, esRRHH } = useAuth();
+  const tieneRendicionGastos = roles?.includes('rendicion_gastos');
   const [saldo, setSaldo] = useState(null);
   const [pendientes, setPendientes] = useState(0);
   const [cumples, setCumples] = useState([]);
@@ -87,6 +88,7 @@ export default function TrabajadorHome() {
             vacaciones: '/trabajador/equipo',
             permisos: '/trabajador/equipo',
             cajaChica: esJefatura || esRRHH ? '/trabajador/caja-chica' : null,
+            rendicionGastos: '/trabajador/rendicion-gastos',
           }}
         />
       )}
@@ -141,6 +143,15 @@ export default function TrabajadorHome() {
           >
             <p className="text-2xl mb-2">💰</p>
             <p className="text-sm font-bold text-[#153A5B]">Caja Chica</p>
+          </Link>
+        )}
+        {(tieneRendicionGastos || esJefatura || esRRHH) && (
+          <Link
+            href="/trabajador/rendicion-gastos"
+            className="bg-white border border-slate-200 rounded-2xl p-4 col-span-2"
+          >
+            <p className="text-2xl mb-2">🧾</p>
+            <p className="text-sm font-bold text-[#153A5B]">Rendición de Gastos</p>
           </Link>
         )}
       </div>

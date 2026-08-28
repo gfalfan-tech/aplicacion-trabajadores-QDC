@@ -433,10 +433,10 @@ export default function TrabajadoresRRHH() {
           <div>
             <label className="text-xs text-slate-500 block mb-1">Roles</label>
             <div className="flex gap-3 flex-wrap">
-              {['trabajador', 'jefatura', 'rrhh', 'administrador'].map((r) => (
+              {['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos'].map((r) => (
                 <label key={r} className="flex items-center gap-1 text-xs">
                   <input type="checkbox" checked={form.roles.includes(r)} onChange={() => toggleRol(r)} />
-                  {r}
+                  {r === 'rendicion_gastos' ? 'rendición de gastos' : r}
                 </label>
               ))}
             </div>
@@ -673,14 +673,14 @@ export default function TrabajadoresRRHH() {
                 <div>
                   <label className="text-xs text-slate-500 block mb-1">Nivel de acceso (roles)</label>
                   <div className="flex gap-3 flex-wrap">
-                    {['trabajador', 'jefatura', 'rrhh', 'administrador'].map((r) => (
+                    {['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos'].map((r) => (
                       <label key={r} className="flex items-center gap-1 text-xs">
                         <input
                           type="checkbox"
                           checked={editForm.roles.includes(r)}
                           onChange={() => toggleRolEdit(r)}
                         />
-                        {r}
+                        {r === 'rendicion_gastos' ? 'rendición de gastos' : r}
                       </label>
                     ))}
                   </div>

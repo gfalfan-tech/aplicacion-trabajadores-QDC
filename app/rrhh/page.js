@@ -107,6 +107,7 @@ export default function RRHHHome() {
           vacaciones: '/rrhh#pendientes-rrhh',
           permisos: '/rrhh#pendientes-rrhh',
           cajaChica: '/rrhh/caja-chica',
+          rendicionGastos: '/trabajador/rendicion-gastos',
         }}
       />
 
@@ -166,6 +167,14 @@ export default function RRHHHome() {
           <p className="text-2xl mb-2">💰</p>
           <p className="text-sm font-bold text-[#153A5B]">Caja Chica</p>
           <p className="text-xs text-slate-500 mt-0.5">Fondo y solicitudes</p>
+        </Link>
+        <Link
+          href="/trabajador/rendicion-gastos"
+          className="bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
+        >
+          <p className="text-2xl mb-2">🧾</p>
+          <p className="text-sm font-bold text-[#153A5B]">Rendición de Gastos</p>
+          <p className="text-xs text-slate-500 mt-0.5">Gerencia y ventas</p>
         </Link>
       </div>
 

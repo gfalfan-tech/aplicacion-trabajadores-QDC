@@ -28,6 +28,7 @@ export default function AlertaPendientes({ enlaces }) {
     { key: 'vacaciones', label: 'vacaciones', labelPlural: 'vacaciones', href: enlaces.vacaciones },
     { key: 'permisos', label: 'permiso', labelPlural: 'permisos', href: enlaces.permisos },
     { key: 'cajaChica', label: 'compra de caja chica', labelPlural: 'compras de caja chica', href: enlaces.cajaChica },
+    { key: 'rendicionGastos', label: 'rendición de gastos', labelPlural: 'rendiciones de gastos', href: enlaces.rendicionGastos },
   ].filter((it) => resumen[it.key] > 0 && it.href);
 
   const total = items.reduce((acc, it) => acc + resumen[it.key], 0);
