@@ -76,8 +76,26 @@ export default function Solicitudes() {
 
   async function enviar(e) {
     e.preventDefault();
-    setEnviando(true);
     setMensaje('');
+
+    // Validaciones antes de mandarlo a la base — así se ve un mensaje claro
+    // en vez del error crudo de la restricción de la tabla (que hoy dice
+    // literal "violates check constraint solicitudes_permiso_check").
+    if (form.fecha_hasta < form.fecha_desde) {
+      setMensaje('La fecha "hasta" no puede ser anterior a la fecha "desde".');
+      return;
+    }
+    if (
+      form.fecha_desde === form.fecha_hasta &&
+      form.hora_desde &&
+      form.hora_hasta &&
+      form.hora_hasta <= form.hora_desde
+    ) {
+      setMensaje('La hora "hasta" debe ser posterior a la hora "desde".');
+      return;
+    }
+
+    setEnviando(true);
     const { data, error } = await supabase
       .from('solicitudes_permiso')
       .insert({
@@ -93,7 +111,11 @@ export default function Solicitudes() {
       .single();
     setEnviando(false);
     if (error) {
-      setMensaje('Error: ' + error.message);
+      setMensaje(
+        error.message.includes('solicitudes_permiso_check')
+          ? 'Revisa las fechas y horas — la fecha/hora "hasta" debe ser igual o posterior a la de "desde".'
+          : 'Error: ' + error.message
+      );
     } else {
       setMensaje('Solicitud enviada. Se avisó a tu jefe directo para que la revise.');
       setForm({
