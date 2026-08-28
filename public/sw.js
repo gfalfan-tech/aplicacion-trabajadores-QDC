@@ -1,4 +1,4 @@
-// Service worker de Portal QDC: solo se encarga de mostrar las
+// Service worker de Gestión RRHH: solo se encarga de mostrar las
 // notificaciones push que llegan y de llevar a la persona a la pantalla
 // correcta al tocarlas. No cachea nada (no es para funcionar sin conexión).
 
@@ -17,10 +17,10 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch (e) {
-    payload = { titulo: 'Portal QDC', cuerpo: event.data.text() };
+    payload = { titulo: 'Gestión RRHH', cuerpo: event.data.text() };
   }
 
-  const titulo = payload.titulo || 'Portal QDC';
+  const titulo = payload.titulo || 'Gestión RRHH';
   const opciones = {
     body: payload.cuerpo || '',
     icon: '/icon-192.png',

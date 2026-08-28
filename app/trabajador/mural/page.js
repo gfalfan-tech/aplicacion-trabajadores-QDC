@@ -76,7 +76,7 @@ function MuralTrabajadorContenido() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-[#153A5B]">
-                    {p.trabajadores?.nombre_completo || 'Portal QDC'}
+                    {p.trabajadores?.nombre_completo || 'Gestión RRHH'}
                   </p>
                   <span className="text-sm">{iconos[p.tipo] || '📰'}</span>
                 </div>

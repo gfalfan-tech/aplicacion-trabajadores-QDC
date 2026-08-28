@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color:#153A5B;">Portal QDC</h2>
+        <h2 style="color:#153A5B;">Gestión RRHH</h2>
         <p><strong>${nombreTrabajador}</strong> te envió una solicitud para revisar:</p>
         <p style="background:#F1F5F9; padding:12px; border-radius:8px;">${detalle}</p>
         <p>

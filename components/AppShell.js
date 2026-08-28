@@ -149,7 +149,7 @@ export default function AppShell({
           ) : (
             <div className="flex items-center gap-2 px-2">
               <img src="/qdc-logo.png" alt="QDC" className="h-8 w-auto" />
-              <span className="text-sm font-bold text-[#153A5B]">Portal QDC</span>
+              <span className="text-sm font-bold text-[#153A5B]">Gestión RRHH</span>
             </div>
           )}
         </div>

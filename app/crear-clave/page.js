@@ -65,7 +65,7 @@ export default function CrearClave() {
         <div className="flex justify-center mb-6">
           <img src="/qdc-logo.png" alt="QDC" className="h-10 w-auto" />
         </div>
-        <p className="text-center text-sm text-slate-500 mb-1">¡Bienvenido/a al Portal QDC!</p>
+        <p className="text-center text-sm text-slate-500 mb-1">¡Bienvenido/a a Gestión RRHH!</p>
         <p className="text-center text-xs text-slate-400 mb-6">
           Antes de continuar, crea la contraseña con la que vas a entrar la próxima vez.
         </p>

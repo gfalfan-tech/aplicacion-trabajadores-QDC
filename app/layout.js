@@ -2,7 +2,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/useAuth';
 
 export const metadata = {
-  title: 'Portal QDC',
+  title: 'Gestión RRHH',
   description: 'Portal de Gestión de Personas — Química del Campo',
   manifest: '/manifest.json',
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },

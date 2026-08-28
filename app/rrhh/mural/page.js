@@ -204,7 +204,7 @@ function MuralRRHHContenido() {
                   <Avatar url={p.trabajadores?.avatar_url} nombre={p.trabajadores?.nombre_completo} size={40} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#153A5B]">
-                      {p.trabajadores?.nombre_completo || 'Portal QDC'}
+                      {p.trabajadores?.nombre_completo || 'Gestión RRHH'}
                     </p>
                     <p className="text-[10px] text-slate-400">{tiempoRelativoPost(p.publicado_en)}</p>
                     <p className="text-sm font-bold text-[#153A5B] mt-2">{p.titulo}</p>

@@ -70,7 +70,7 @@ export async function POST(req) {
   });
 
   const payload = JSON.stringify({
-    titulo: record.titulo || 'Portal QDC',
+    titulo: record.titulo || 'Gestión RRHH',
     cuerpo: record.cuerpo || '',
     url,
     tag: record.relacionado_tipo || undefined,

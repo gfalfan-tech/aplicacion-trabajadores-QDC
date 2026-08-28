@@ -34,7 +34,7 @@ export async function POST(req) {
 
   if (!trabajador) {
     return NextResponse.json(
-      { error: 'Ese correo no está registrado en el Portal QDC. Contacta a RR.HH. para que te creen una cuenta.' },
+      { error: 'Ese correo no está registrado en Gestión RRHH. Contacta a RR.HH. para que te creen una cuenta.' },
       { status: 404 }
     );
   }
