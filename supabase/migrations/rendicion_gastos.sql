@@ -12,7 +12,13 @@
 -- la primera etapa y RR.HH. resuelve directo (mismo criterio que
 -- vacaciones). Un rechazo en cualquier etapa termina el flujo ahí mismo.
 --
--- Aplicar en el SQL Editor de Supabase. Seguro de re-ejecutar completo.
+-- IMPORTANTE — aplicar en DOS pasos, en este orden:
+--   1) Primero, en una ejecución aparte, el archivo
+--      rendicion_gastos_1_rol.sql (agrega el rol nuevo al enum).
+--   2) Recién después, este archivo completo.
+-- Postgres no permite usar un valor de enum recién agregado dentro de la
+-- misma transacción en que se agregó — por eso va separado, no es
+-- opcional. Seguro de re-ejecutar completo.
 -- =========================================================
 
 -- -----------------------------------------------------
