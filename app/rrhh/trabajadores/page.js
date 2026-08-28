@@ -25,7 +25,7 @@ const vacio = {
 };
 
 export default function TrabajadoresRRHH() {
-  const { roles } = useAuth();
+  const { roles, perfil, recargarPerfil } = useAuth();
   const esAdministrador = roles.includes('administrador');
 
   const [lista, setLista] = useState([]);
@@ -236,6 +236,14 @@ export default function TrabajadoresRRHH() {
         setGuardandoEdicion(false);
         setMensaje('❌ Error al actualizar roles: ' + (dataRoles.error || `Error ${resRoles.status}`));
         return;
+      }
+
+      // Si te estás editando a ti mismo (ej. te agregaste un rol nuevo),
+      // el contexto de sesión (useAuth) quedó con los roles viejos en
+      // memoria — sin esto, el rol recién guardado no aparece en la app
+      // hasta cerrar sesión o recargar la página entera.
+      if (perfil?.id === editandoId) {
+        await recargarPerfil();
       }
 
       const resVacaciones = await fetch('/api/admin/actualizar-vacaciones', {
