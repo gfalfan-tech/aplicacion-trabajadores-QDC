@@ -9,19 +9,33 @@ import NotificacionesBell from '@/components/NotificacionesBell';
 import { useConversaciones } from '@/lib/useConversaciones';
 import { useNotificaciones } from '@/lib/useNotificaciones';
 import { useBadgeApp } from '@/lib/useBadgeApp';
+import { useRespaldosNuevos } from '@/lib/useRespaldosNuevos';
 import Avatar from '@/components/Avatar';
 
 const CLAVE_COLAPSADO = 'qdc_menu_colapsado';
 export const CLAVE_ULTIMA_VISTA = 'qdc_ultima_vista';
 
-export default function AppShell({ links, titulo, children, requiereRRHH = false }) {
+export default function AppShell({
+  links,
+  titulo,
+  children,
+  requiereRRHH = false,
+  requiereAdministrador = false,
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, perfil, esRRHH, cargando } = useAuth();
+  const { session, perfil, esRRHH, esAdministrador, cargando } = useAuth();
   const [colapsado, setColapsado] = useState(false);
   const [mostrarMas, setMostrarMas] = useState(false);
   const { totalNoLeidos } = useConversaciones(perfil?.id);
   const { notificaciones, noLeidas, marcarLeida, marcarTodasLeidas } = useNotificaciones(perfil?.id);
+  const nuevosRespaldos = useRespaldosNuevos(esAdministrador);
+
+  // Algunos ítems del menú (hoy solo "Respaldos") son solo para
+  // administrador, aunque vengan en la misma lista rrhhLinks que ve
+  // cualquier rrhh/jefatura — se filtran acá, en un solo lugar, en vez de
+  // armar un links[] distinto en cada página.
+  const linksFiltrados = links.filter((l) => !l.soloAdministrador || esAdministrador);
 
   // Número que se muestra fuera de la app, sobre el ícono (mensajes +
   // notificaciones sin leer, lo mismo que ya se ve como globitos rojos
@@ -79,15 +93,20 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
     }
     if (requiereRRHH && !esRRHH) {
       router.replace('/trabajador');
+      return;
     }
-  }, [cargando, session, perfil, esRRHH, requiereRRHH, router]);
+    if (requiereAdministrador && !esAdministrador) {
+      router.replace('/rrhh');
+    }
+  }, [cargando, session, perfil, esRRHH, esAdministrador, requiereRRHH, requiereAdministrador, router]);
 
   if (
     cargando ||
     !session ||
     !perfil ||
     !perfil.clave_definida ||
-    (requiereRRHH && !esRRHH)
+    (requiereRRHH && !esRRHH) ||
+    (requiereAdministrador && !esAdministrador)
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm">
@@ -110,8 +129,8 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
   // "Mensajes"), los primeros 4 quedan fijos y el resto — incluyendo
   // Documentos, Mural o Perfil, que antes quedaban totalmente
   // inalcanzables en el celular — se mueve a la hoja de "Más".
-  const linksVisiblesMovil = links.length > 5 ? links.slice(0, 4) : links;
-  const linksResto = links.length > 5 ? links.slice(4) : [];
+  const linksVisiblesMovil = linksFiltrados.length > 5 ? linksFiltrados.slice(0, 4) : linksFiltrados;
+  const linksResto = linksFiltrados.length > 5 ? linksFiltrados.slice(4) : [];
 
   return (
     <div className="min-h-screen bg-slate-100 md:flex">
@@ -136,7 +155,7 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
         </div>
 
         <nav className="flex-1 px-2 py-4 space-y-1">
-          {links.map((l) => (
+          {linksFiltrados.map((l) => (
             <Link
               key={l.href}
               href={l.href}
@@ -154,6 +173,11 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
                 {l.href === '/mensajes' && totalNoLeidos > 0 && (
                   <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
                     {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
+                  </span>
+                )}
+                {l.href === '/rrhh/respaldos' && nuevosRespaldos > 0 && (
+                  <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                    {nuevosRespaldos > 9 ? '9+' : nuevosRespaldos}
                   </span>
                 )}
               </span>
@@ -255,6 +279,11 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
                   {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
                 </span>
               )}
+              {l.href === '/rrhh/respaldos' && nuevosRespaldos > 0 && (
+                <span className="absolute -top-1 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                  {nuevosRespaldos > 9 ? '9+' : nuevosRespaldos}
+                </span>
+              )}
             </span>
             {l.label}
           </Link>
@@ -297,6 +326,11 @@ export default function AppShell({ links, titulo, children, requiereRRHH = false
                   {l.href === '/mensajes' && totalNoLeidos > 0 && (
                     <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
                       {totalNoLeidos > 9 ? '9+' : totalNoLeidos}
+                    </span>
+                  )}
+                  {l.href === '/rrhh/respaldos' && nuevosRespaldos > 0 && (
+                    <span className="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                      {nuevosRespaldos > 9 ? '9+' : nuevosRespaldos}
                     </span>
                   )}
                 </span>
