@@ -16,6 +16,15 @@ import { armarDesgloseVacaciones } from '@/lib/vacacionesDesglose';
 import Avatar from '@/components/Avatar';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 import { estadoVacacionesLabel, estadoVacacionesStyle } from '@/lib/estadoVacaciones';
+import {
+  calcularVacacionesPendientesPeriodoAnterior,
+  calcularVacacionesPeriodoActual,
+} from '@/lib/vacacionesPeriodoAnterior';
+
+function formatDias(n) {
+  const v = Number(n || 0);
+  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -336,25 +345,49 @@ export default function VerPerfilTrabajador() {
 
           <div>
             <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">VACACIONES</p>
-            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-3 grid grid-cols-3 gap-3 text-center">
-              <div>
-                <p className="text-xl font-bold text-[#0F5C8C]">
-                  {saldo ? Math.max(0, saldo.dias_disponibles_estimados) : '—'}
-                </p>
-                <p className="text-[10px] text-slate-500">Disponibles</p>
+            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-3">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-xl font-bold text-[#0F5C8C]">
+                    {saldo ? Math.max(0, saldo.dias_disponibles_estimados) : '—'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Disponibles</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-[#153A5B]">
+                    {saldo?.dias_progresivos_vigentes ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Progresivos</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-500 mt-1">
+                    {saldo ? new Date(saldo.fecha_corte).toLocaleDateString('es-CL') : '—'}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Corte del saldo</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xl font-bold text-[#153A5B]">
-                  {saldo?.dias_progresivos_vigentes ?? '—'}
-                </p>
-                <p className="text-[10px] text-slate-500">Progresivos</p>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-slate-500 mt-1">
-                  {saldo ? new Date(saldo.fecha_corte).toLocaleDateString('es-CL') : '—'}
-                </p>
-                <p className="text-[10px] text-slate-500">Corte del saldo</p>
-              </div>
+              {saldo && (
+                <div className="grid grid-cols-2 gap-3 text-center border-t border-slate-100 mt-3 pt-3">
+                  <div>
+                    <p
+                      className={`text-sm font-bold ${
+                        calcularVacacionesPendientesPeriodoAnterior(saldo) > 0
+                          ? 'text-amber-700'
+                          : 'text-[#153A5B]'
+                      }`}
+                    >
+                      {formatDias(calcularVacacionesPendientesPeriodoAnterior(saldo))}
+                    </p>
+                    <p className="text-[10px] text-slate-500">Pendientes período anterior</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#153A5B]">
+                      {formatDias(calcularVacacionesPeriodoActual(saldo))}
+                    </p>
+                    <p className="text-[10px] text-slate-500">Período actual</p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
               {vacaciones.length === 0 && (
