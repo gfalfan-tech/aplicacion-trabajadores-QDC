@@ -207,15 +207,15 @@ function MuralRRHHContenido() {
                       {p.trabajadores?.nombre_completo || 'Gestión RRHH'}
                     </p>
                     <p className="text-[10px] text-slate-400">{tiempoRelativoPost(p.publicado_en)}</p>
-                    <p className="text-sm font-bold text-[#153A5B] mt-2">{p.titulo}</p>
-                    <p className="text-xs text-slate-500 mt-1">{p.contenido}</p>
+                    <p className="text-base font-bold text-[#153A5B] mt-2">{p.titulo}</p>
+                    <p className="text-sm text-slate-500 mt-1">{p.contenido}</p>
                     {p.imagen_url && (
                       <img
                         src={p.imagen_url}
                         alt={p.titulo}
                         onClick={() => toggleAmpliada(p.id)}
-                        className={`mt-2 rounded-lg border border-slate-200 w-full object-contain bg-slate-50 cursor-zoom-in transition-all ${
-                          ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-96'
+                        className={`mt-2 rounded-lg border border-slate-200 max-w-full h-auto object-contain bg-slate-50 cursor-zoom-in transition-all ${
+                          ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-[560px]'
                         }`}
                       />
                     )}
