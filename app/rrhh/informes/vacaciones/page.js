@@ -109,49 +109,49 @@ export default function InformeVacaciones() {
       </button>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table className="w-full text-xs min-w-[640px]">
+        <table className="w-full text-xs min-w-[640px] border-collapse">
           <thead>
-            <tr className="text-left text-slate-400 border-b border-slate-100">
-              <th className="px-3 py-2">Trabajador</th>
-              <th className="px-3 py-2">RUT</th>
-              <th className="px-3 py-2">Pendientes del período anterior</th>
-              <th className="px-3 py-2">Período actual</th>
-              <th className="px-3 py-2">Días progresivos</th>
-              <th className="px-3 py-2">Vacaciones disponibles</th>
+            <tr className="bg-slate-50 text-slate-500">
+              <th className="px-3 py-2 border border-slate-200 text-left">Trabajador</th>
+              <th className="px-3 py-2 border border-slate-200 text-center">RUT</th>
+              <th className="px-3 py-2 border border-slate-200 text-center">Pendientes del período anterior</th>
+              <th className="px-3 py-2 border border-slate-200 text-center">Período actual</th>
+              <th className="px-3 py-2 border border-slate-200 text-center">Días progresivos</th>
+              <th className="px-3 py-2 border border-slate-200 text-center">Vacaciones disponibles</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {cargando && (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-slate-400">
+                <td colSpan={6} className="px-3 py-4 text-slate-400 border border-slate-200">
                   Cargando…
                 </td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-slate-400">
+                <td colSpan={6} className="px-3 py-4 text-slate-400 border border-slate-200">
                   No hay trabajadores activos con saldo de vacaciones.
                 </td>
               </tr>
             )}
             {filas.map((f) => (
               <tr key={f.trabajador_id}>
-                <td className="px-3 py-2 font-bold text-[#153A5B]">
+                <td className="px-3 py-2 font-bold text-[#153A5B] border border-slate-200">
                   {f.nombre_completo}
                   {f.cargo && <span className="block text-[10px] font-normal text-slate-400">{f.cargo}</span>}
                 </td>
-                <td className="px-3 py-2 text-slate-600">{f.rut || '—'}</td>
-                <td className="px-3 py-2 text-slate-600">
+                <td className="px-3 py-2 text-slate-600 border border-slate-200 text-center">{f.rut || '—'}</td>
+                <td className="px-3 py-2 text-slate-600 border border-slate-200 text-center">
                   {f.pendientePeriodoAnterior > 0 ? (
                     <span className="font-bold text-amber-700">{formatDias(f.pendientePeriodoAnterior)}</span>
                   ) : (
                     '0'
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-600">{formatDias(f.periodoActual)}</td>
-                <td className="px-3 py-2 text-slate-600">{formatDias(f.diasProgresivos)}</td>
-                <td className="px-3 py-2 text-slate-600">{formatDias(f.disponibles)}</td>
+                <td className="px-3 py-2 text-slate-600 border border-slate-200 text-center">{formatDias(f.periodoActual)}</td>
+                <td className="px-3 py-2 text-slate-600 border border-slate-200 text-center">{formatDias(f.diasProgresivos)}</td>
+                <td className="px-3 py-2 text-slate-600 border border-slate-200 text-center">{formatDias(f.disponibles)}</td>
               </tr>
             ))}
           </tbody>
