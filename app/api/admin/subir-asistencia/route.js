@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseAsistenciaXls, normalizarRut } from '@/lib/asistenciaXls';
 import { parseAsistenciaPdf } from '@/lib/asistenciaPdf';
+import { armarMapaJustificaciones } from '@/lib/asistenciaJustificacion';
 
 // Recibe el "Reporte de asistencia simplificado" que exporta el sistema de
 // marcaje (hoy en PDF, una página por trabajador — antes era un .xls con
@@ -88,24 +89,50 @@ export async function POST(req) {
     }
 
     // Respaldo: si alguna de las fechas que parecen inasistencia cae dentro
-    // de unas vacaciones YA aprobadas en la app para este trabajador, se
-    // descuenta de las inasistencias del período — por si el sistema de
-    // marcaje no quedó bien sincronizado con esas vacaciones. Nunca se
-    // descuenta más de lo que el propio archivo reportó como inasistencias.
+    // de unas vacaciones o un permiso de día completo ya aprobados, o de una
+    // licencia médica ya registrada por RR.HH., se descuenta de las
+    // inasistencias del período — por si el sistema de marcaje no quedó
+    // bien sincronizado. Nunca se descuenta más de lo que el propio archivo
+    // reportó como inasistencias. Los permisos CON horario (entrada tardía o
+    // salida anticipada) no se auto-descuentan acá — solo se muestran como
+    // "posible justificación" al ver el detalle (ver
+    // components/ModalDetalleAsistencia.js), porque no hay forma de cruzar
+    // con certeza minutos de atraso contra un horario sin la hora real de
+    // marcaje.
     let diasInasistencia = fila.dias_inasistencia;
     let fechasAjustadas = [];
     if (fila.fechas_inasistencia?.length && diasInasistencia > 0) {
-      const { data: vacacionesAprobadas } = await admin
-        .from('solicitudes_vacaciones')
-        .select('fecha_desde, fecha_hasta')
-        .eq('trabajador_id', trabajador.id)
-        .eq('estado', 'aprobada')
-        .lte('fecha_desde', fila.periodo_hasta)
-        .gte('fecha_hasta', fila.periodo_desde);
+      const [{ data: vacacionesAprobadas }, { data: permisosAprobados }, { data: licenciasMedicas }] =
+        await Promise.all([
+          admin
+            .from('solicitudes_vacaciones')
+            .select('fecha_desde, fecha_hasta')
+            .eq('trabajador_id', trabajador.id)
+            .eq('estado', 'aprobada')
+            .lte('fecha_desde', fila.periodo_hasta)
+            .gte('fecha_hasta', fila.periodo_desde),
+          admin
+            .from('solicitudes_permiso')
+            .select('fecha_desde, fecha_hasta, hora_desde, hora_hasta')
+            .eq('trabajador_id', trabajador.id)
+            .eq('estado', 'aprobada')
+            .lte('fecha_desde', fila.periodo_hasta)
+            .gte('fecha_hasta', fila.periodo_desde),
+          admin
+            .from('licencias_medicas')
+            .select('fecha_desde, fecha_hasta')
+            .eq('trabajador_id', trabajador.id)
+            .lte('fecha_desde', fila.periodo_hasta)
+            .gte('fecha_hasta', fila.periodo_desde),
+        ]);
 
-      fechasAjustadas = fila.fechas_inasistencia.filter((f) =>
-        (vacacionesAprobadas || []).some((v) => f >= v.fecha_desde && f <= v.fecha_hasta)
-      );
+      const justificaciones = armarMapaJustificaciones({
+        vacaciones: vacacionesAprobadas,
+        permisos: permisosAprobados,
+        licencias: licenciasMedicas,
+      });
+
+      fechasAjustadas = fila.fechas_inasistencia.filter((f) => justificaciones.get(f)?.completo);
       if (fechasAjustadas.length) {
         diasInasistencia = Math.max(0, diasInasistencia - fechasAjustadas.length);
       }

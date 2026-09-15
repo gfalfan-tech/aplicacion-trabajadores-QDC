@@ -114,8 +114,10 @@ export default function AsistenciaRRHH() {
         algún mes vuelve a venir así). La app toma de ahí, para cada trabajador, los días de
         inasistencia y los minutos de atraso del período — ya calculados respetando el horario real
         de cada uno — y los muestra en su perfil. Como respaldo, si alguna inasistencia del reporte
-        cae en fechas con vacaciones ya aprobadas en la app, se descuenta automáticamente (por si el
-        sistema de marcaje no quedó bien sincronizado con esas vacaciones).
+        cae en fechas con vacaciones o permisos de día completo ya aprobados, o con una licencia
+        médica ya registrada en la app, se descuenta automáticamente (por si el sistema de marcaje
+        no quedó bien sincronizado). Al ver el detalle día por día de cada trabajador, además se
+        marcan los atrasos que podrían estar justificados por un permiso con horario.
       </p>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
@@ -154,8 +156,8 @@ export default function AsistenciaRRHH() {
                     <p className="text-xs text-amber-600 mt-1">
                       Se descontaron {a.fechas_ajustadas_por_vacaciones.length} inasistencia(s) del
                       reporte ({a.fechas_ajustadas_por_vacaciones.join(', ')}) por coincidir con
-                      vacaciones ya aprobadas en la app — el archivo traía{' '}
-                      {a.dias_inasistencia_original}.
+                      vacaciones, un permiso de día completo o una licencia médica ya registrados en
+                      la app — el archivo traía {a.dias_inasistencia_original}.
                     </p>
                   )}
                 </div>

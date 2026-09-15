@@ -20,6 +20,13 @@ import {
   calcularVacacionesPendientesPeriodoAnterior,
   calcularVacacionesPeriodoActual,
 } from '@/lib/vacacionesPeriodoAnterior';
+import ModalDetalleAsistencia from '@/components/ModalDetalleAsistencia';
+import { crearLicencia, eliminarLicencia, urlFirmadaLicencia } from '@/lib/licenciasMedicas';
+
+function formatFechaCortaLicencia(fechaISO) {
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  return new Date(anio, mes - 1, dia).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 function formatDias(n) {
   const v = Number(n || 0);
@@ -55,8 +62,19 @@ export default function VerPerfilTrabajador() {
   const [certificados, setCertificados] = useState([]);
   const [documentos, setDocumentos] = useState([]);
   const [asistencia, setAsistencia] = useState(null);
+  const [mostrarDetalleAsistencia, setMostrarDetalleAsistencia] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
+
+  // Licencias médicas registradas para este trabajador (RR.HH. las carga
+  // directo, sin flujo de aprobación — ver lib/licenciasMedicas.js).
+  const [licencias, setLicencias] = useState([]);
+  const [mostrarModalLicencia, setMostrarModalLicencia] = useState(false);
+  const [formLicencia, setFormLicencia] = useState({ fecha_desde: '', fecha_hasta: '', comentario: '' });
+  const [archivoLicencia, setArchivoLicencia] = useState(null);
+  const [guardandoLicencia, setGuardandoLicencia] = useState(false);
+  const [errorLicencia, setErrorLicencia] = useState('');
+  const [eliminandoLicencia, setEliminandoLicencia] = useState(null);
 
   // Editar fechas o cancelar una reserva de vacaciones ya aprobada (por
   // fuerza mayor). "modoVacacion" es 'editar' o 'cancelar'.
@@ -94,6 +112,7 @@ export default function VerPerfilTrabajador() {
         { data: vacacionesData },
         { data: certificadosData },
         { data: documentosData },
+        { data: licenciasData },
       ] = await Promise.all([
         supabase.from('trabajador_roles').select('rol').eq('trabajador_id', id),
         supabase.from('v_vacaciones_saldo').select('*').eq('trabajador_id', id).maybeSingle(),
@@ -116,9 +135,15 @@ export default function VerPerfilTrabajador() {
           .from('documentos')
           .select('*, documentos_versiones(id, version, storage_path, vigente)')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('licencias_medicas')
+          .select('*')
+          .eq('trabajador_id', id)
+          .order('fecha_desde', { ascending: false }),
       ]);
 
       if (!activo) return;
+      setLicencias(licenciasData || []);
       setRoles((rolesData || []).map((r) => r.rol));
       setSaldo(saldoData || null);
       setPermisos(permisosData || []);
@@ -252,6 +277,78 @@ export default function VerPerfilTrabajador() {
     cerrarModalVacacion();
   }
 
+  async function recargarLicencias() {
+    const { data } = await supabase
+      .from('licencias_medicas')
+      .select('*')
+      .eq('trabajador_id', id)
+      .order('fecha_desde', { ascending: false });
+    setLicencias(data || []);
+  }
+
+  function abrirModalLicencia() {
+    setFormLicencia({ fecha_desde: '', fecha_hasta: '', comentario: '' });
+    setArchivoLicencia(null);
+    setErrorLicencia('');
+    setMostrarModalLicencia(true);
+  }
+
+  function cerrarModalLicencia() {
+    setMostrarModalLicencia(false);
+  }
+
+  async function guardarLicencia() {
+    if (!formLicencia.fecha_desde || !formLicencia.fecha_hasta) {
+      setErrorLicencia('Indica la fecha de inicio y de término de la licencia.');
+      return;
+    }
+    if (formLicencia.fecha_hasta < formLicencia.fecha_desde) {
+      setErrorLicencia('La fecha de término no puede ser antes que la de inicio.');
+      return;
+    }
+    setGuardandoLicencia(true);
+    setErrorLicencia('');
+    try {
+      const { data: sesion } = await supabase.auth.getSession();
+      await crearLicencia({
+        trabajadorId: id,
+        fechaDesde: formLicencia.fecha_desde,
+        fechaHasta: formLicencia.fecha_hasta,
+        comentario: formLicencia.comentario,
+        file: archivoLicencia,
+        registradoPor: sesion?.session?.user?.id,
+      });
+      await recargarLicencias();
+      cerrarModalLicencia();
+    } catch (err) {
+      setErrorLicencia(err.message);
+    } finally {
+      setGuardandoLicencia(false);
+    }
+  }
+
+  async function onEliminarLicencia(l) {
+    if (!confirm('¿Eliminar esta licencia médica? Dejará de justificar los días de asistencia asociados.')) return;
+    setEliminandoLicencia(l.id);
+    try {
+      await eliminarLicencia(l.id, l.respaldo_storage_path);
+      await recargarLicencias();
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setEliminandoLicencia(null);
+    }
+  }
+
+  async function onVerRespaldoLicencia(storagePath) {
+    try {
+      const url = await urlFirmadaLicencia(storagePath);
+      window.open(url, '_blank');
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   return (
     <AppShell links={rrhhLinks} titulo="Ver perfil" requiereRRHH>
       <Link
@@ -339,9 +436,61 @@ export default function VerPerfilTrabajador() {
               <p className="text-xs text-slate-400 mt-2">
                 Período {asistencia.periodo_desde} → {asistencia.periodo_hasta}
                 {!asistencia.esMesActual && ' (último reporte cargado por RR.HH.)'}
+                {asistencia.dias_licencia_medica > 0 &&
+                  ` · ${asistencia.dias_licencia_medica} día(s) con licencia médica según el reporte de marcaje`}
               </p>
+              <button
+                onClick={() => setMostrarDetalleAsistencia(true)}
+                className="mt-2 text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2"
+              >
+                Ver detalle día por día
+              </button>
             </div>
           )}
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-slate-400 tracking-wide">LICENCIAS MÉDICAS</p>
+              <button
+                onClick={abrirModalLicencia}
+                className="text-xs font-bold text-white bg-[#0F5C8C] rounded-lg px-3 py-1.5"
+              >
+                + Registrar licencia médica
+              </button>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+              {licencias.length === 0 && (
+                <p className="text-sm text-slate-400 p-4">No hay licencias médicas registradas.</p>
+              )}
+              {licencias.map((l) => (
+                <div key={l.id} className="px-4 py-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-[#153A5B]">
+                      {formatFechaCortaLicencia(l.fecha_desde)} → {formatFechaCortaLicencia(l.fecha_hasta)}
+                    </p>
+                    {l.comentario && <p className="text-xs text-slate-500 mt-0.5">{l.comentario}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {l.respaldo_storage_path && (
+                      <button
+                        onClick={() => onVerRespaldoLicencia(l.respaldo_storage_path)}
+                        className="text-[10px] font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-2 py-1"
+                      >
+                        📎 Ver certificado
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onEliminarLicencia(l)}
+                      disabled={eliminandoLicencia === l.id}
+                      className="text-[10px] font-bold text-red-700 bg-red-50 rounded-lg px-2 py-1 disabled:opacity-60"
+                    >
+                      {eliminandoLicencia === l.id ? '…' : 'Eliminar'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div>
             <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">VACACIONES</p>
@@ -622,6 +771,89 @@ export default function VerPerfilTrabajador() {
                   : modoVacacion === 'cancelar'
                   ? 'Confirmar cancelación'
                   : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {mostrarDetalleAsistencia && trabajador && asistencia && (
+        <ModalDetalleAsistencia
+          trabajador={trabajador}
+          asistencia={asistencia}
+          onCerrar={() => setMostrarDetalleAsistencia(false)}
+        />
+      )}
+
+      {mostrarModalLicencia && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          onClick={cerrarModalLicencia}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-[#153A5B] mb-1">Registrar licencia médica</p>
+            <p className="text-xs text-slate-500 mb-4">
+              Estos días quedarán marcados como justificados al revisar la asistencia de{' '}
+              {trabajador?.nombre_completo.split(' ')[0]}, aunque el reporte de marcaje no los traiga
+              marcados.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <label className="text-xs text-slate-500">Desde</label>
+                <input
+                  type="date"
+                  value={formLicencia.fecha_desde}
+                  onChange={(e) => setFormLicencia({ ...formLicencia, fecha_desde: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500">Hasta</label>
+                <input
+                  type="date"
+                  value={formLicencia.fecha_hasta}
+                  onChange={(e) => setFormLicencia({ ...formLicencia, fecha_hasta: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <label className="text-xs text-slate-500">Comentario (opcional)</label>
+            <textarea
+              value={formLicencia.comentario}
+              onChange={(e) => setFormLicencia({ ...formLicencia, comentario: e.target.value })}
+              placeholder="Ej: reposo por 5 días, folio 123456…"
+              rows={2}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3"
+            />
+
+            <label className="text-xs text-slate-500">Certificado médico (opcional)</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setArchivoLicencia(e.target.files?.[0] || null)}
+              className="w-full text-xs mb-3"
+            />
+
+            {errorLicencia && <p className="text-xs text-red-600 mb-3">{errorLicencia}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={cerrarModalLicencia}
+                className="flex-1 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg py-2"
+              >
+                Volver
+              </button>
+              <button
+                onClick={guardarLicencia}
+                disabled={guardandoLicencia}
+                className="flex-1 text-xs font-bold text-white bg-[#0F5C8C] rounded-lg py-2 disabled:opacity-60"
+              >
+                {guardandoLicencia ? 'Guardando…' : 'Registrar licencia'}
               </button>
             </div>
           </div>
