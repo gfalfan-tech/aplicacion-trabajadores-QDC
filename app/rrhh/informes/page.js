@@ -68,7 +68,7 @@ export default function InformesRRHH() {
       </Link>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 space-y-3">
-        <p className="text-sm font-bold text-[#153A5B]">Emitir informe</p>
+        <p className="text-sm font-bold text-[#153A5B]">Emitir informe de asistencia</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-500">Desde</label>
@@ -94,9 +94,23 @@ export default function InformesRRHH() {
           disabled={cargando}
           className="w-full bg-[#0F5C8C] text-white font-bold rounded-lg py-2 text-sm disabled:opacity-60"
         >
-          {cargando ? 'Generando…' : '🧾 Emitir informe'}
+          {cargando ? 'Generando…' : '🧾 Emitir informe de asistencia'}
         </button>
         {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6 space-y-3">
+        <p className="text-sm font-bold text-[#153A5B]">Emitir informe de vacaciones</p>
+        <p className="text-xs text-slate-500">
+          Saldo de vacaciones de todos los trabajadores al día de hoy (no depende del rango de
+          fechas de arriba).
+        </p>
+        <Link
+          href="/rrhh/informes/vacaciones"
+          className="block w-full text-center bg-[#0F5C8C] text-white font-bold rounded-lg py-2 text-sm"
+        >
+          🏖️ Emitir informe de vacaciones
+        </Link>
       </div>
 
       {informe && (
