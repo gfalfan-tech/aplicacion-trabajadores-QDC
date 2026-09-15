@@ -5,7 +5,10 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import { supabase } from '@/lib/supabaseClient';
-import { calcularVacacionesPendientesPeriodoAnterior } from '@/lib/vacacionesPeriodoAnterior';
+import {
+  calcularVacacionesPendientesPeriodoAnterior,
+  calcularVacacionesPeriodoActual,
+} from '@/lib/vacacionesPeriodoAnterior';
 
 function formatDias(n) {
   const v = Number(n || 0);
@@ -47,6 +50,7 @@ export default function InformeVacaciones() {
             cargo: t?.cargo,
             estado: t?.estado || 'activo',
             pendientePeriodoAnterior: calcularVacacionesPendientesPeriodoAnterior(s),
+            periodoActual: calcularVacacionesPeriodoActual(s),
             diasProgresivos: s.dias_progresivos_vigentes || 0,
             disponibles: s.dias_disponibles_estimados || 0,
           };
@@ -76,6 +80,8 @@ export default function InformeVacaciones() {
         anterior" marca hasta un período completo (15 días hábiles + progresivos vigentes) que ya
         debería haberse tomado según su fecha de ingreso — si arrastra más de un período sin usar,
         el resto igual queda incluido en "Vacaciones disponibles", pero acá solo se destaca uno.
+        "Período actual" es el resto del saldo, del período que está corriendo ahora: los dos
+        números siempre suman el total de "Vacaciones disponibles".
       </p>
 
       {error && <p className="text-xs text-red-600 mb-4">{error}</p>}
@@ -87,6 +93,7 @@ export default function InformeVacaciones() {
               <th className="px-3 py-2">Trabajador</th>
               <th className="px-3 py-2">RUT</th>
               <th className="px-3 py-2">Pendientes del período anterior</th>
+              <th className="px-3 py-2">Período actual</th>
               <th className="px-3 py-2">Días progresivos</th>
               <th className="px-3 py-2">Vacaciones disponibles</th>
             </tr>
@@ -94,14 +101,14 @@ export default function InformeVacaciones() {
           <tbody className="divide-y divide-slate-100">
             {cargando && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-slate-400">
+                <td colSpan={6} className="px-3 py-4 text-slate-400">
                   Cargando…
                 </td>
               </tr>
             )}
             {!cargando && filas.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-4 text-slate-400">
+                <td colSpan={6} className="px-3 py-4 text-slate-400">
                   No hay trabajadores activos con saldo de vacaciones.
                 </td>
               </tr>
@@ -120,6 +127,7 @@ export default function InformeVacaciones() {
                     '0'
                   )}
                 </td>
+                <td className="px-3 py-2 text-slate-600">{formatDias(f.periodoActual)}</td>
                 <td className="px-3 py-2 text-slate-600">{formatDias(f.diasProgresivos)}</td>
                 <td className="px-3 py-2 text-slate-600">{formatDias(f.disponibles)}</td>
               </tr>
