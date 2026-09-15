@@ -109,9 +109,10 @@ export default function AsistenciaRRHH() {
       </Link>
 
       <p className="text-xs text-slate-500 mb-4">
-        Sube cada mes el "Reporte de asistencia simplificado" que exporta el sistema de marcaje (un
-        archivo .xls con una hoja por trabajador). La app toma de ahí, para cada trabajador, los días
-        de inasistencia y los minutos de atraso del período — ya calculados respetando el horario real
+        Sube cada mes el "Reporte de asistencia simplificado" que exporta el sistema de marcaje (hoy
+        en PDF, con una página por trabajador — también se acepta el formato .xls anterior, por si
+        algún mes vuelve a venir así). La app toma de ahí, para cada trabajador, los días de
+        inasistencia y los minutos de atraso del período — ya calculados respetando el horario real
         de cada uno — y los muestra en su perfil. Como respaldo, si alguna inasistencia del reporte
         cae en fechas con vacaciones ya aprobadas en la app, se descuenta automáticamente (por si el
         sistema de marcaje no quedó bien sincronizado con esas vacaciones).
@@ -124,12 +125,12 @@ export default function AsistenciaRRHH() {
           disabled={subiendo}
           className="w-full bg-[#0F5C8C] text-white font-bold rounded-lg py-2 text-sm disabled:opacity-60"
         >
-          {subiendo ? 'Procesando…' : '📁 Elegir archivo .xls'}
+          {subiendo ? 'Procesando…' : '📁 Elegir archivo (PDF)'}
         </button>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".xls,.xlsx"
+          accept=".pdf,.xls,.xlsx"
           className="hidden"
           onChange={subir}
         />
@@ -175,7 +176,7 @@ export default function AsistenciaRRHH() {
                   <div key={n.rut + n.hoja} className="px-4 py-3">
                     <p className="text-sm font-bold text-red-700">{n.rut}</p>
                     <p className="text-xs text-slate-500">
-                      Hoja "{n.hoja}" — no existe ningún trabajador con ese RUT en la app
+                      "{n.hoja}" — no existe ningún trabajador con ese RUT en la app
                       {n.error ? ` (${n.error})` : ''}.
                     </p>
                   </div>

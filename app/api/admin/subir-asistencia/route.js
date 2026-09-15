@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { parseAsistenciaXls, normalizarRut } from '@/lib/asistenciaXls';
+import { parseAsistenciaPdf } from '@/lib/asistenciaPdf';
 
 // Recibe el "Reporte de asistencia simplificado" que exporta el sistema de
-// marcaje (un archivo .xls con una hoja por trabajador) y guarda, por
-// trabajador y por período, los días de inasistencia y los minutos de
-// atraso que ese mismo sistema ya calculó. Solo RR.HH./administrador puede
-// usar esto.
+// marcaje (hoy en PDF, una página por trabajador — antes era un .xls con
+// una hoja por trabajador, que se sigue aceptando por si algún mes vuelve a
+// venir así) y guarda, por trabajador y por período, los días de
+// inasistencia y los minutos de atraso que ese mismo sistema ya calculó.
+// Solo RR.HH./administrador puede usar esto.
 export async function POST(req) {
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -46,10 +48,12 @@ export async function POST(req) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const nombreArchivo = (file.name || '').toLowerCase();
+  const esPdf = nombreArchivo.endsWith('.pdf') || file.type === 'application/pdf';
 
   let filas;
   try {
-    filas = parseAsistenciaXls(buffer);
+    filas = esPdf ? await parseAsistenciaPdf(buffer) : parseAsistenciaXls(buffer);
   } catch (err) {
     return NextResponse.json(
       { error: 'No se pudo leer el archivo. ¿Es el reporte de asistencia exportado por el sistema de marcaje? ' + err.message },
@@ -73,13 +77,13 @@ export async function POST(req) {
 
   for (const fila of filas) {
     if (!fila.ok) {
-      sinDatos.push({ rut: fila.rut, hoja: fila.hoja, motivo: fila.motivo });
+      sinDatos.push({ rut: fila.rut, hoja: fila.nombre || fila.hoja, motivo: fila.motivo });
       continue;
     }
 
     const trabajador = porRut.get(normalizarRut(fila.rut));
     if (!trabajador) {
-      noEncontrados.push({ rut: fila.rut, hoja: fila.hoja });
+      noEncontrados.push({ rut: fila.rut, hoja: fila.nombre || fila.hoja });
       continue;
     }
 
