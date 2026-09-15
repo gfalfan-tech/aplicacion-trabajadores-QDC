@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import { verPdfVacaciones, descargarPdfVacaciones } from '@/lib/solicitudPdf';
+import { armarDesgloseVacaciones } from '@/lib/vacacionesDesglose';
 import { calcularDiasHabiles } from '@/lib/diasHabiles';
 import { estadoVacacionesLabel, estadoVacacionesStyle, fechasResolucionVacaciones } from '@/lib/estadoVacaciones';
 
@@ -92,11 +93,13 @@ export default function Vacaciones() {
   }
 
   async function verPdf(s) {
-    await verPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, perfil);
+    const desglose = armarDesgloseVacaciones(s, saldo);
+    await verPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo, ...desglose }, perfil);
   }
 
   async function descargarPdf(s) {
-    await descargarPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, perfil);
+    const desglose = armarDesgloseVacaciones(s, saldo);
+    await descargarPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo, ...desglose }, perfil);
   }
 
   if (!perfil) return null;

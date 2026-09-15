@@ -12,6 +12,7 @@ import {
   verPdfVacaciones as abrirPdfVacaciones,
   descargarPdfVacaciones,
 } from '@/lib/solicitudPdf';
+import { armarDesgloseVacaciones } from '@/lib/vacacionesDesglose';
 import Avatar from '@/components/Avatar';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 import { estadoVacacionesLabel, estadoVacacionesStyle } from '@/lib/estadoVacaciones';
@@ -159,12 +160,20 @@ export default function VerPerfilTrabajador() {
 
   async function verPdfVacaciones(s) {
     if (!trabajador) return;
-    await abrirPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, trabajador);
+    const desglose = armarDesgloseVacaciones(s, saldo);
+    await abrirPdfVacaciones(
+      { ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo, ...desglose },
+      trabajador
+    );
   }
 
   async function descargarVacaciones(s) {
     if (!trabajador) return;
-    await descargarPdfVacaciones({ ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo }, trabajador);
+    const desglose = armarDesgloseVacaciones(s, saldo);
+    await descargarPdfVacaciones(
+      { ...s, jefe_nombre: s.jefe_aprobador?.nombre_completo, ...desglose },
+      trabajador
+    );
   }
 
   async function recargarVacaciones() {
