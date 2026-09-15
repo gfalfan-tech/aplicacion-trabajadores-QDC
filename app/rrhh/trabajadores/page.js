@@ -7,6 +7,15 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
+import {
+  calcularVacacionesPendientesPeriodoAnterior,
+  calcularVacacionesPeriodoActual,
+} from '@/lib/vacacionesPeriodoAnterior';
+
+function formatDias(n) {
+  const v = Number(n || 0);
+  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
 
 const vacio = {
   nombre_completo: '',
@@ -38,6 +47,7 @@ export default function TrabajadoresRRHH() {
 
   const [editandoId, setEditandoId] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [saldoEdicion, setSaldoEdicion] = useState(null);
   const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [eliminandoId, setEliminandoId] = useState(null);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState(null);
@@ -146,11 +156,24 @@ export default function TrabajadoresRRHH() {
           : f
       );
     }
+
+    // Cuadro informativo (de solo lectura) con el desglose de vacaciones
+    // ya calculado para este trabajador — mismo criterio que el informe
+    // de vacaciones (ver lib/vacacionesPeriodoAnterior.js), como
+    // referencia mientras se edita el saldo a mano.
+    setSaldoEdicion(null);
+    const { data: saldoVista } = await supabase
+      .from('v_vacaciones_saldo')
+      .select('*')
+      .eq('trabajador_id', t.id)
+      .maybeSingle();
+    if (saldoVista) setSaldoEdicion(saldoVista);
   }
 
   function cerrarEdicion() {
     setEditandoId(null);
     setEditForm(null);
+    setSaldoEdicion(null);
     setClaveNueva('');
     setMensajeClave('');
   }
@@ -633,6 +656,44 @@ export default function TrabajadoresRRHH() {
                     </select>
                   </div>
                 </div>
+                {saldoEdicion && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="text-[10px] font-bold text-slate-400 tracking-wide mb-2">
+                      VACACIONES — SALDO ACTUAL (SOLO REFERENCIA)
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <p className="text-slate-400">Pendientes período anterior</p>
+                        <p className="font-bold text-amber-700">
+                          {formatDias(calcularVacacionesPendientesPeriodoAnterior(saldoEdicion))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Período actual</p>
+                        <p className="font-bold text-[#153A5B]">
+                          {formatDias(calcularVacacionesPeriodoActual(saldoEdicion))}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Días progresivos vigentes</p>
+                        <p className="font-bold text-[#153A5B]">
+                          {formatDias(saldoEdicion.dias_progresivos_vigentes)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400">Vacaciones disponibles</p>
+                        <p className="font-bold text-[#153A5B]">
+                          {formatDias(saldoEdicion.dias_disponibles_estimados)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2">
+                      Este cuadro es solo para referencia — se recalcula solo. Lo que se edita abajo
+                      es la base manual ("vacaciones pendientes a la fecha" y "días progresivos a la
+                      fecha").
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-slate-500">Vacaciones pendientes a la fecha</label>

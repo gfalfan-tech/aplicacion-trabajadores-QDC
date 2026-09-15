@@ -9,6 +9,7 @@ import {
   calcularVacacionesPendientesPeriodoAnterior,
   calcularVacacionesPeriodoActual,
 } from '@/lib/vacacionesPeriodoAnterior';
+import { generarPdfInformeVacaciones } from '@/lib/informeVacacionesPdf';
 
 function formatDias(n) {
   const v = Number(n || 0);
@@ -19,6 +20,7 @@ export default function InformeVacaciones() {
   const [filas, setFilas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [generandoPdf, setGenerandoPdf] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -69,6 +71,18 @@ export default function InformeVacaciones() {
     };
   }, []);
 
+  async function descargarPdf() {
+    if (!filas.length) return;
+    setGenerandoPdf(true);
+    try {
+      await generarPdfInformeVacaciones(filas);
+    } catch (err) {
+      setError('No se pudo generar el PDF: ' + err.message);
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
+
   return (
     <AppShell links={rrhhLinks} titulo="Informe de vacaciones" requiereRRHH>
       <Link href="/rrhh/informes" className="inline-block text-xs font-bold text-[#0F5C8C] mb-4">
@@ -85,6 +99,14 @@ export default function InformeVacaciones() {
       </p>
 
       {error && <p className="text-xs text-red-600 mb-4">{error}</p>}
+
+      <button
+        onClick={descargarPdf}
+        disabled={generandoPdf || cargando || !filas.length}
+        className="text-xs font-bold text-[#0F5C8C] bg-[#E6F1FB] rounded-lg px-3 py-2 mb-4 disabled:opacity-60"
+      >
+        {generandoPdf ? 'Generando PDF…' : '⬇️ Descargar PDF'}
+      </button>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
         <table className="w-full text-xs min-w-[640px]">
