@@ -4,12 +4,13 @@ import { parseAsistenciaXls, normalizarRut } from '@/lib/asistenciaXls';
 import { parseAsistenciaPdf } from '@/lib/asistenciaPdf';
 import { armarMapaJustificaciones } from '@/lib/asistenciaJustificacion';
 
-// Recibe el "Reporte de asistencia simplificado" que exporta el sistema de
-// marcaje (hoy en PDF, una página por trabajador — antes era un .xls con
-// una hoja por trabajador, que se sigue aceptando por si algún mes vuelve a
-// venir así) y guarda, por trabajador y por período, los días de
-// inasistencia y los minutos de atraso que ese mismo sistema ya calculó.
-// Solo RR.HH./administrador puede usar esto.
+// Recibe el reporte de asistencia que exporta el sistema de marcaje en PDF
+// (una página por trabajador — se aceptan tanto el "Reporte de asistencia y
+// jornada" como el "Reporte de asistencia simplificado" anterior; también
+// se acepta el formato .xls antiguo, con una hoja por trabajador, por si
+// algún mes vuelve a venir así) y guarda, por trabajador y por período, los
+// días de inasistencia y los minutos de atraso que ese mismo sistema ya
+// calculó. Solo RR.HH./administrador puede usar esto.
 export async function POST(req) {
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;

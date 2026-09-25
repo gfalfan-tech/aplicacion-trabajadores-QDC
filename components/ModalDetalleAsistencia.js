@@ -103,6 +103,11 @@ export default function ModalDetalleAsistencia({ trabajador, asistencia, onCerra
                           {j.detalle}
                         </span>
                       )}
+                      {d.justificacion_reporte && (
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-200 rounded-full px-2 py-0.5">
+                          Marcaje: {d.justificacion_reporte}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );

@@ -109,15 +109,18 @@ export default function AsistenciaRRHH() {
       </Link>
 
       <p className="text-xs text-slate-500 mb-4">
-        Sube cada mes el "Reporte de asistencia simplificado" que exporta el sistema de marcaje (hoy
-        en PDF, con una página por trabajador — también se acepta el formato .xls anterior, por si
+        Sube cada mes el reporte de asistencia que exporta el sistema de marcaje en PDF, con una
+        página por trabajador (se aceptan tanto el "Reporte de asistencia y jornada" como el
+        "Reporte de asistencia simplificado" anterior — también el formato .xls antiguo, por si
         algún mes vuelve a venir así). La app toma de ahí, para cada trabajador, los días de
         inasistencia y los minutos de atraso del período — ya calculados respetando el horario real
         de cada uno — y los muestra en su perfil. Como respaldo, si alguna inasistencia del reporte
         cae en fechas con vacaciones o permisos de día completo ya aprobados, o con una licencia
         médica ya registrada en la app, se descuenta automáticamente (por si el sistema de marcaje
         no quedó bien sincronizado). Al ver el detalle día por día de cada trabajador, además se
-        marcan los atrasos que podrían estar justificados por un permiso con horario.
+        marcan los atrasos que podrían estar justificados por un permiso con horario, y se muestra
+        el motivo textual que haya traído el propio reporte para ese día (por ejemplo, un permiso
+        o una licencia).
       </p>
 
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
