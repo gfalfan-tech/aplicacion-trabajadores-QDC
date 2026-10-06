@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
@@ -44,6 +44,11 @@ export default function TrabajadoresRRHH() {
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [mostrarForm, setMostrarForm] = useState(false);
+
+  const [subiendoSaldo, setSubiendoSaldo] = useState(false);
+  const [resultadoSaldo, setResultadoSaldo] = useState(null);
+  const [errorSaldo, setErrorSaldo] = useState('');
+  const archivoSaldoRef = useRef(null);
 
   const [editandoId, setEditandoId] = useState(null);
   const [editForm, setEditForm] = useState(null);
@@ -90,6 +95,41 @@ export default function TrabajadoresRRHH() {
     }));
   }
 
+  // Carga en bloque el informe manual "VACACIONES DEL PERSONAL" (con
+  // columna RUT) para poner al día el saldo de vacaciones de todos los
+  // trabajadores que trae, de una sola vez — ver
+  // app/api/admin/subir-saldo-vacaciones/route.js.
+  async function subirSaldoVacaciones(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setSubiendoSaldo(true);
+    setErrorSaldo('');
+    setResultadoSaldo(null);
+    try {
+      const { data: sesion } = await supabase.auth.getSession();
+      const token = sesion?.session?.access_token;
+      const formData = new FormData();
+      formData.append('file', file);
+      const resp = await fetch('/api/admin/subir-saldo-vacaciones', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const json = await resp.json();
+      if (!resp.ok) {
+        setErrorSaldo(json.error || 'Ocurrió un error al procesar el archivo.');
+      } else {
+        setResultadoSaldo(json);
+        cargar();
+      }
+    } catch (err) {
+      setErrorSaldo('Ocurrió un error al procesar el archivo: ' + err.message);
+    } finally {
+      setSubiendoSaldo(false);
+    }
+  }
+
   async function crear(e) {
     e.preventDefault();
     if (!form.roles.length) {
@@ -132,11 +172,12 @@ export default function TrabajadoresRRHH() {
       roles: rolesPorTrabajador[t.id] || [],
       dias_pendientes_base: 0,
       dias_progresivos_reconocidos: 0,
+      proximo_dia_progresivo_fecha: '',
     });
 
     const { data: saldo } = await supabase
       .from('vacaciones_saldo_inicial')
-      .select('dias_pendientes_base, dias_progresivos_reconocidos')
+      .select('dias_pendientes_base, dias_progresivos_reconocidos, proximo_dia_progresivo_fecha')
       .eq('trabajador_id', t.id)
       // Desempata por creado_en (fecha y hora exacta) para no quedarse con
       // una edición vieja del mismo día cuando fecha_corte empata.
@@ -152,6 +193,7 @@ export default function TrabajadoresRRHH() {
               ...f,
               dias_pendientes_base: saldo.dias_pendientes_base || 0,
               dias_progresivos_reconocidos: saldo.dias_progresivos_reconocidos || 0,
+              proximo_dia_progresivo_fecha: saldo.proximo_dia_progresivo_fecha || '',
             }
           : f
       );
@@ -276,6 +318,7 @@ export default function TrabajadoresRRHH() {
           trabajador_id: editandoId,
           dias_pendientes_base: editForm.dias_pendientes_base,
           dias_progresivos_reconocidos: editForm.dias_progresivos_reconocidos,
+          proximo_dia_progresivo_fecha: editForm.proximo_dia_progresivo_fecha || null,
         }),
       });
       if (!resVacaciones.ok) {
@@ -326,6 +369,61 @@ export default function TrabajadoresRRHH() {
       >
         {mostrarForm ? 'Cancelar' : '+ Nuevo trabajador'}
       </button>
+
+      <button
+        onClick={() => archivoSaldoRef.current?.click()}
+        disabled={subiendoSaldo}
+        className="w-full bg-white border border-[#0F5C8C] text-[#0F5C8C] font-bold rounded-lg py-2.5 text-sm mb-2 disabled:opacity-60"
+      >
+        {subiendoSaldo ? 'Procesando…' : '📁 Cargar saldo de vacaciones (Excel)'}
+      </button>
+      <input
+        ref={archivoSaldoRef}
+        type="file"
+        accept=".xls,.xlsx"
+        className="hidden"
+        onChange={subirSaldoVacaciones}
+      />
+      {errorSaldo && <p className="text-xs text-red-600 mb-3">{errorSaldo}</p>}
+      {resultadoSaldo && (
+        <div className="mb-4 space-y-2">
+          <p className="text-xs font-bold text-slate-400 tracking-wide">
+            SALDO ACTUALIZADO AL {resultadoSaldo.fecha_corte} — {resultadoSaldo.actualizados.length}{' '}
+            trabajador(es)
+          </p>
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-64 overflow-y-auto">
+            {resultadoSaldo.actualizados.map((a) => (
+              <div key={a.rut} className="px-4 py-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-bold text-[#153A5B]">{a.nombre}</p>
+                <p className="text-xs text-slate-500 text-right shrink-0">
+                  {formatDias(a.dias_pendientes_base)} días · {formatDias(a.dias_progresivos_reconocidos)}{' '}
+                  progresivos
+                </p>
+              </div>
+            ))}
+          </div>
+          {resultadoSaldo.noEncontrados.length > 0 && (
+            <>
+              <p className="text-xs font-bold text-red-600 tracking-wide">
+                NO SE PUDIERON EMPAREJAR ({resultadoSaldo.noEncontrados.length})
+              </p>
+              <div className="bg-white rounded-xl border border-red-200 divide-y divide-red-100">
+                {resultadoSaldo.noEncontrados.map((n) => (
+                  <div key={n.rut} className="px-4 py-2">
+                    <p className="text-sm font-bold text-red-700">
+                      {n.nombre || '(sin nombre)'} — {n.rut}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      No existe ningún trabajador con ese RUT en la app
+                      {n.error ? ` (${n.error})` : ''}.
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {mostrarForm && (
         <form onSubmit={crear} className="bg-white rounded-xl border border-slate-200 p-4 mb-6 space-y-3">
@@ -711,7 +809,7 @@ export default function TrabajadoresRRHH() {
                     <label className="text-xs text-slate-500">
                 Días progresivos a la fecha
                 <span className="block text-[10px] text-slate-400 font-normal">
-                  Desde hoy, se suma 1 día más cada 3 años
+                  Se suman según la fecha de abajo
                 </span>
               </label>
                     <input
@@ -727,6 +825,23 @@ export default function TrabajadoresRRHH() {
                       className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500">
+                    Próximo día progresivo (fecha)
+                    <span className="block text-[10px] text-slate-400 font-normal">
+                      El día en que corresponde sumar 1 más (y luego cada 3 años después de esa
+                      fecha). Déjalo vacío si todavía no le corresponde ninguno.
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.proximo_dia_progresivo_fecha}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, proximo_dia_progresivo_fecha: e.target.value })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
                 </div>
                 <p className="text-[10px] text-slate-400 -mt-2">
                   Al guardar se registra como el saldo "al día" desde hoy — no borra el historial anterior.

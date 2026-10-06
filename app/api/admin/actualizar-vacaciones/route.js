@@ -48,6 +48,10 @@ export async function POST(req) {
       creado_en: ahora.toISOString(),
       dias_pendientes_base: body.dias_pendientes_base || 0,
       dias_progresivos_reconocidos: body.dias_progresivos_reconocidos || 0,
+      // Fecha exacta en que corresponde el próximo día progresivo (ver
+      // supabase/migrations/vacaciones_progresivo_aniversario.sql) — se
+      // deja vacía/null si el trabajador todavía no tiene progresivos.
+      proximo_dia_progresivo_fecha: body.proximo_dia_progresivo_fecha || null,
     },
     { onConflict: 'trabajador_id' }
   );
