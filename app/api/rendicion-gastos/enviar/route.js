@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { enviarCorreo } from '@/lib/enviarCorreo';
+import { correoRendicionNueva } from '@/lib/plantillasCorreo';
 
 // Pasa una rendición de 'borrador' a 'pendiente' — recién ahí empieza a
 // verla su jefe directo (o RR.HH./administrador si no tiene uno válido).
@@ -40,7 +42,7 @@ export async function POST(req) {
 
   const { data: rendicion } = await admin
     .from('rendiciones_gastos')
-    .select('id, trabajador_id, estado')
+    .select('id, trabajador_id, estado, moneda')
     .eq('id', rendicionId)
     .maybeSingle();
   if (!rendicion) {
@@ -84,10 +86,9 @@ export async function POST(req) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Aviso in-app para quien le toca revisar primero (su jefe directo, o
-  // RR.HH./administrador si no tiene uno con acceso al sistema) — sin
-  // enlace por correo, a diferencia de vacaciones/permisos: esta
-  // rendición se revisa siempre dentro de la app.
+  // Aviso in-app + correo con botones para quien le toca revisar primero
+  // (su jefe directo, o RR.HH./administrador si no tiene uno con acceso
+  // al sistema).
   const { data: trabajador } = await admin
     .from('trabajadores')
     .select('nombre_completo, jefe_directo_id')
@@ -95,13 +96,17 @@ export async function POST(req) {
     .maybeSingle();
 
   let idsAvisar = [];
+  let etapaCorreo = 'finanzas';
   if (trabajador?.jefe_directo_id) {
     const { data: rolesJefe } = await admin
       .from('trabajador_roles')
       .select('rol')
       .eq('trabajador_id', trabajador.jefe_directo_id);
     const jefeValido = (rolesJefe || []).some((r) => ['jefatura', 'rrhh', 'administrador'].includes(r.rol));
-    if (jefeValido) idsAvisar = [trabajador.jefe_directo_id];
+    if (jefeValido) {
+      idsAvisar = [trabajador.jefe_directo_id];
+      etapaCorreo = 'jefe';
+    }
   }
   if (idsAvisar.length === 0) {
     const { data: rolesRRHH } = await admin
@@ -121,6 +126,39 @@ export async function POST(req) {
         relacionado_id: rendicionId,
       }))
     );
+  }
+
+  // Correo con botones de aprobar/rechazar al revisor principal
+  const idCorreoRevisor = idsAvisar[0];
+  if (idCorreoRevisor) {
+    const { data: revisor } = await admin
+      .from('trabajadores')
+      .select('id, email')
+      .eq('id', idCorreoRevisor)
+      .maybeSingle();
+    if (revisor?.email) {
+      const { data: tokenRevision } = await admin.rpc('generar_token_revision_rendicion_gastos', {
+        p_rendicion_id: rendicionId,
+        p_revisor_id: revisor.id,
+        p_etapa: etapaCorreo,
+      });
+      if (tokenRevision) {
+        const { data: lineas } = await admin
+          .from('rendicion_gastos_lineas')
+          .select('monto')
+          .eq('rendicion_id', rendicionId);
+        const totalGastos = (lineas || []).reduce((s, l) => s + Number(l.monto || 0), 0);
+
+        const { subject, html } = correoRendicionNueva({
+          nombreTrabajador: trabajador?.nombre_completo || 'Un trabajador',
+          totalGastos,
+          moneda: rendicion.moneda || 'CLP',
+          etapa: etapaCorreo,
+          token: tokenRevision,
+        });
+        enviarCorreo({ to: revisor.email, subject, html }).catch(() => {});
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

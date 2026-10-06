@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { enviarCorreo } from '@/lib/enviarCorreo';
+import { correoRendicionResuelta, correoRendicionNueva } from '@/lib/plantillasCorreo';
 
 // Aprueba o rechaza una rendición de gastos. Misma doble aprobación que
 // vacaciones (ver app/api/vacaciones/resolver/route.js — este archivo es
@@ -42,7 +44,7 @@ export async function POST(req) {
 
   const { data: rendicion } = await admin
     .from('rendiciones_gastos')
-    .select('id, trabajador_id, estado')
+    .select('id, trabajador_id, estado, moneda')
     .eq('id', rendicionId)
     .maybeSingle();
   if (!rendicion) {
@@ -54,7 +56,7 @@ export async function POST(req) {
 
   const { data: trabajador } = await admin
     .from('trabajadores')
-    .select('jefe_directo_id')
+    .select('jefe_directo_id, email, nombre_completo')
     .eq('id', rendicion.trabajador_id)
     .maybeSingle();
 
@@ -120,6 +122,12 @@ export async function POST(req) {
         : 'Tu rendición de gastos no fue autorizada. Favor dirigirse personalmente con su jefatura.'
     );
 
+    // Correo informativo al trabajador
+    if (trabajador?.email) {
+      const { subject, html } = correoRendicionResuelta({ estado });
+      enviarCorreo({ to: trabajador.email, subject, html }).catch(() => {});
+    }
+
     return NextResponse.json({ ok: true });
   }
 
@@ -142,6 +150,60 @@ export async function POST(req) {
       }
 
       await notificar('Tu jefe directo aprobó tu rendición de gastos. Ahora está a la espera de la firma de Finanzas.');
+
+      // Correo informativo al trabajador
+      if (trabajador?.email) {
+        const { subject, html } = correoRendicionResuelta({ estado: 'aprobada_jefe' });
+        enviarCorreo({ to: trabajador.email, subject, html }).catch(() => {});
+      }
+
+      // Correo con botones al siguiente revisor (RRHH/Finanzas)
+      const { data: rolesRRHH } = await admin
+        .from('trabajador_roles')
+        .select('trabajador_id')
+        .in('rol', ['rrhh', 'administrador']);
+      const idsRRHH = [...new Set((rolesRRHH || []).map((r) => r.trabajador_id))];
+      if (idsRRHH.length > 0) {
+        const { data: revisores } = await admin
+          .from('trabajadores')
+          .select('id, email')
+          .in('id', idsRRHH);
+        const revisorConEmail = (revisores || []).find((r) => r.email);
+        if (revisorConEmail) {
+          const { data: tokenFinanzas } = await admin.rpc('generar_token_revision_rendicion_gastos', {
+            p_rendicion_id: rendicionId,
+            p_revisor_id: revisorConEmail.id,
+            p_etapa: 'finanzas',
+          });
+          if (tokenFinanzas) {
+            const { data: lineas } = await admin
+              .from('rendicion_gastos_lineas')
+              .select('monto')
+              .eq('rendicion_id', rendicionId);
+            const totalGastos = (lineas || []).reduce((s, l) => s + Number(l.monto || 0), 0);
+            const { subject: subj, html: htmlFinanzas } = correoRendicionNueva({
+              nombreTrabajador: trabajador?.nombre_completo || 'Un trabajador',
+              totalGastos,
+              moneda: rendicion.moneda || 'CLP',
+              etapa: 'finanzas',
+              token: tokenFinanzas,
+            });
+            enviarCorreo({ to: revisorConEmail.email, subject: subj, html: htmlFinanzas }).catch(() => {});
+          }
+        }
+
+        // Notificación in-app a todos los RRHH/admin para la segunda firma
+        await admin.from('notificaciones').insert(
+          idsRRHH.map((id) => ({
+            trabajador_id: id,
+            titulo: 'Rendición de gastos — segunda firma',
+            cuerpo: `${trabajador?.nombre_completo || 'Un trabajador'} tiene una rendición de gastos aprobada por su jefe. Necesita tu firma de Finanzas.`,
+            relacionado_tipo: 'rendicion_gastos',
+            relacionado_id: rendicionId,
+          }))
+        );
+      }
+
       return NextResponse.json({ ok: true });
     }
 
@@ -160,6 +222,13 @@ export async function POST(req) {
     }
 
     await notificar('Tu rendición de gastos no fue autorizada. Favor dirigirse personalmente con su jefatura.');
+
+    // Correo informativo al trabajador
+    if (trabajador?.email) {
+      const { subject, html } = correoRendicionResuelta({ estado: 'rechazada' });
+      enviarCorreo({ to: trabajador.email, subject, html }).catch(() => {});
+    }
+
     return NextResponse.json({ ok: true });
   }
 
@@ -188,6 +257,12 @@ export async function POST(req) {
       ? 'Tu rendición de gastos fue aprobada.'
       : 'Tu rendición de gastos no fue autorizada. Favor dirigirse personalmente con su jefatura.'
   );
+
+  // Correo informativo al trabajador
+  if (trabajador?.email) {
+    const { subject, html } = correoRendicionResuelta({ estado });
+    enviarCorreo({ to: trabajador.email, subject, html }).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true });
 }

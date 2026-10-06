@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
 import { resolverAprobadorEsperado, calcularTotales, formatearCLP } from '@/lib/cajaChicaLogica';
+import { enviarCorreo } from '@/lib/enviarCorreo';
+import { correoCajaChicaNueva } from '@/lib/plantillasCorreo';
 
 // Crea una nueva solicitud de compra contra el período de caja chica
 // abierto. Solo jefatura, RR.HH. y administrador pueden solicitar.
@@ -125,6 +127,32 @@ export async function POST(req) {
         relacionado_id: solicitud.id,
       }))
     );
+  }
+
+  // Correo con botones de aprobar/rechazar al aprobador principal
+  const idCorreo = aprobadorEsperadoId || destinatarios[0];
+  if (idCorreo) {
+    const { data: revisor } = await admin
+      .from('trabajadores')
+      .select('id, email')
+      .eq('id', idCorreo)
+      .maybeSingle();
+    if (revisor?.email) {
+      const { data: tokenRevision } = await admin.rpc('generar_token_revision_caja_chica', {
+        p_solicitud_id: solicitud.id,
+        p_revisor_id: revisor.id,
+      });
+      if (tokenRevision) {
+        const { subject, html } = correoCajaChicaNueva({
+          nombreSolicitante: solicitante?.nombre_completo || 'Un trabajador',
+          monto,
+          articulo,
+          razon,
+          token: tokenRevision,
+        });
+        enviarCorreo({ to: revisor.email, subject, html }).catch(() => {});
+      }
+    }
   }
 
   return NextResponse.json({ ok: true, solicitud });

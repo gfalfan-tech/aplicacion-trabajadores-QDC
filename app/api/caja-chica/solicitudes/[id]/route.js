@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
 import { resolverAprobadorEsperado, puedeAprobar } from '@/lib/cajaChicaLogica';
+import { enviarCorreo } from '@/lib/enviarCorreo';
+import { correoCajaChicaResuelta } from '@/lib/plantillasCorreo';
 
 // Aplica una acción sobre una solicitud de caja chica: aprobar, rechazar,
 // entregar (el dinero, físicamente) o confirmar_rendicion (el ajuste
@@ -86,6 +88,22 @@ export async function PATCH(req, { params }) {
       relacionado_tipo: 'caja_chica_solicitud',
       relacionado_id: id,
     });
+
+    // Correo informativo al solicitante
+    const { data: solicitanteCorreo } = await admin
+      .from('trabajadores')
+      .select('email')
+      .eq('id', solicitud.solicitante_id)
+      .maybeSingle();
+    if (solicitanteCorreo?.email) {
+      const { subject, html } = correoCajaChicaResuelta({
+        monto: solicitud.monto_solicitado,
+        articulo: solicitud.articulo,
+        aprobada: accion === 'aprobar',
+        motivoRechazo,
+      });
+      enviarCorreo({ to: solicitanteCorreo.email, subject, html }).catch(() => {});
+    }
 
     return NextResponse.json({ ok: true });
   }
