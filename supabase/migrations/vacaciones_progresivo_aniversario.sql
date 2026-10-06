@@ -37,11 +37,18 @@
 alter table vacaciones_saldo_inicial
   add column if not exists proximo_dia_progresivo_fecha date;
 
--- Mismo nombre y mismos TIPOS de parámetros (numeric, date, date) que la
--- versión anterior (p_base, p_fecha_corte, p_fecha_ref) — por eso "create
--- or replace" reemplaza la función existente en vez de dejar una versión
--- vieja huérfana; solo cambia el SIGNIFICADO del segundo parámetro.
-create or replace function fn_dias_progresivos_vigentes(
+-- La vista v_vacaciones_saldo depende de la función — hay que borrar la
+-- vista ANTES de poder borrar la función (si no, Postgres tira error
+-- 2BP01 "cannot drop function ... because other objects depend on it").
+drop view if exists v_vacaciones_saldo;
+
+-- Mismos TIPOS de parámetros (numeric, date, date) que la versión
+-- anterior (p_base, p_fecha_corte, p_fecha_ref), pero Postgres no deja
+-- cambiar el NOMBRE de un parámetro con "create or replace function"
+-- aunque el tipo no cambie (error 42P13) — hay que borrarla primero.
+drop function if exists fn_dias_progresivos_vigentes(numeric, date, date);
+
+create function fn_dias_progresivos_vigentes(
   p_base numeric,
   p_proximo_fecha date,
   p_fecha_ref date default current_date
@@ -60,8 +67,6 @@ as $$
         )
       end;
 $$;
-
-drop view if exists v_vacaciones_saldo;
 
 create view v_vacaciones_saldo as
 select
