@@ -13,11 +13,7 @@ import {
   calcularVacacionesPendientesPeriodoAnterior,
   calcularVacacionesPeriodoActual,
 } from '@/lib/vacacionesPeriodoAnterior';
-
-function formatDias(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
+import { formatDias, formatDiasDisponibles } from '@/lib/formatDias';
 
 function formatFechaHora(fechaISO) {
   return new Date(fechaISO).toLocaleDateString('es-CL', {
@@ -119,7 +115,7 @@ export default function Vacaciones() {
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
             <p className="text-xl font-bold text-[#0F5C8C]">
-              {saldo ? Math.max(0, saldo.dias_disponibles_estimados) : '—'}
+              {saldo ? formatDiasDisponibles(saldo.dias_disponibles_estimados) : '—'}
             </p>
             <p className="text-[10px] text-slate-500">Disponibles</p>
           </div>

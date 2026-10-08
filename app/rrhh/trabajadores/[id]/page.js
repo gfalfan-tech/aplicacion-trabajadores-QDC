@@ -28,10 +28,7 @@ function formatFechaCortaLicencia(fechaISO) {
   return new Date(anio, mes - 1, dia).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function formatDias(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
+import { formatDias, formatDiasDisponibles } from '@/lib/formatDias';
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -498,7 +495,7 @@ export default function VerPerfilTrabajador() {
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div>
                   <p className="text-xl font-bold text-[#0F5C8C]">
-                    {saldo ? Math.max(0, saldo.dias_disponibles_estimados) : '—'}
+                    {saldo ? formatDiasDisponibles(saldo.dias_disponibles_estimados) : '—'}
                   </p>
                   <p className="text-[10px] text-slate-500">Disponibles</p>
                 </div>

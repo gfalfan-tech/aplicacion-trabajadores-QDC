@@ -11,11 +11,7 @@ import {
   calcularVacacionesPendientesPeriodoAnterior,
   calcularVacacionesPeriodoActual,
 } from '@/lib/vacacionesPeriodoAnterior';
-
-function formatDias(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
+import { formatDias, formatDiasDisponibles } from '@/lib/formatDias';
 
 const vacio = {
   nombre_completo: '',

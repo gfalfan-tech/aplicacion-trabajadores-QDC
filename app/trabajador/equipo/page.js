@@ -8,6 +8,7 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import CalendarioVacaciones from '@/components/CalendarioVacaciones';
 import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
+import { formatDiasDisponibles } from '@/lib/formatDias';
 import ModalDetalleAsistencia from '@/components/ModalDetalleAsistencia';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
 import {
@@ -235,7 +236,7 @@ export default function MiEquipo() {
               <div key={t.id} className="flex items-center justify-between px-4 py-3">
                 <p className="text-sm font-bold text-[#153A5B]">{t.nombre_completo}</p>
                 <p className="text-sm text-[#0F5C8C] font-bold">
-                  {t.saldo ? Math.max(0, t.saldo.dias_disponibles_estimados) : '—'}{' '}
+                  {t.saldo ? formatDiasDisponibles(t.saldo.dias_disponibles_estimados) : '—'}{' '}
                   <span className="text-xs font-normal text-slate-500">disponibles</span>
                 </p>
               </div>

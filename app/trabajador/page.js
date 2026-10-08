@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import AlertaPendientes from '@/components/AlertaPendientes';
+import { formatDiasDisponibles } from '@/lib/formatDias';
 
 const MESES_CORTOS = [
   'ene',
@@ -96,7 +97,7 @@ export default function TrabajadorHome() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
           <p className="text-2xl font-bold text-[#0F5C8C]">
-            {saldo ? Math.max(0, saldo.dias_disponibles_estimados) : '—'}
+            {saldo ? formatDiasDisponibles(saldo.dias_disponibles_estimados) : '—'}
           </p>
           <p className="text-xs text-slate-500">Vacaciones disponibles</p>
         </div>

@@ -10,11 +10,7 @@ import {
   calcularVacacionesPeriodoActual,
 } from '@/lib/vacacionesPeriodoAnterior';
 import { generarPdfInformeVacaciones } from '@/lib/informeVacacionesPdf';
-
-function formatDias(n) {
-  const v = Number(n || 0);
-  return v.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
+import { formatDias } from '@/lib/formatDias';
 
 export default function InformeVacaciones() {
   const [filas, setFilas] = useState([]);

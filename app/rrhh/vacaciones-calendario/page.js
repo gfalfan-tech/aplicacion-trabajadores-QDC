@@ -6,6 +6,7 @@ import AppShell from '@/components/AppShell';
 import { rrhhLinks } from '@/lib/navLinks';
 import CalendarioVacaciones from '@/components/CalendarioVacaciones';
 import { obtenerCalendarioVacaciones, mesActualISO } from '@/lib/vacacionesEquipo';
+import { formatDiasDisponibles } from '@/lib/formatDias';
 
 export default function CalendarioVacacionesRRHH() {
   const [mes, setMes] = useState(mesActualISO());
@@ -84,7 +85,7 @@ export default function CalendarioVacacionesRRHH() {
               <p className="text-xs text-slate-500">{t.areas?.nombre || 'Sin área'}</p>
             </div>
             <p className="text-sm text-[#0F5C8C] font-bold">
-              {t.saldo ? Math.max(0, t.saldo.dias_disponibles_estimados) : '—'}{' '}
+              {t.saldo ? formatDiasDisponibles(t.saldo.dias_disponibles_estimados) : '—'}{' '}
               <span className="text-xs font-normal text-slate-500">disponibles</span>
             </p>
           </div>
