@@ -102,6 +102,7 @@ export async function POST(req) {
         dias_pendientes_base: fila.dias_pendientes_base,
         dias_progresivos_reconocidos: fila.dias_progresivos_reconocidos,
         proximo_dia_progresivo_fecha: fila.proximo_dia_progresivo_fecha,
+        pendiente_periodos_anteriores: fila.pendiente_periodos_anteriores,
       },
       { onConflict: 'trabajador_id' }
     );

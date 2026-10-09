@@ -52,6 +52,7 @@ export async function POST(req) {
       // supabase/migrations/vacaciones_progresivo_aniversario.sql) — se
       // deja vacía/null si el trabajador todavía no tiene progresivos.
       proximo_dia_progresivo_fecha: body.proximo_dia_progresivo_fecha || null,
+      pendiente_periodos_anteriores: body.pendiente_periodos_anteriores || 0,
     },
     { onConflict: 'trabajador_id' }
   );
