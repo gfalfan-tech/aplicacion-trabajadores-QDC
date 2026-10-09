@@ -99,7 +99,9 @@ export async function POST(req) {
         trabajador_id: trabajador.id,
         fecha_corte: fechaCorte,
         creado_en: ahora.toISOString(),
-        dias_pendientes_base: fila.dias_pendientes_base,
+        // "SALDO AL DIA DE HOY" en el Excel es solo el período actual;
+        // el total disponible real es SALDO + Pendiente periodos anteriores.
+        dias_pendientes_base: fila.dias_pendientes_base + (fila.pendiente_periodos_anteriores || 0),
         dias_progresivos_reconocidos: fila.dias_progresivos_reconocidos,
         proximo_dia_progresivo_fecha: fila.proximo_dia_progresivo_fecha,
         pendiente_periodos_anteriores: fila.pendiente_periodos_anteriores,
