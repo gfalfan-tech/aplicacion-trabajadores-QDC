@@ -36,6 +36,32 @@ export default function Login() {
         setError('No se pudo ingresar: ' + msg);
       }
     } else {
+      // Registrar inicio de sesión en auditoría (silencioso: no bloquea el login)
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (s?.user?.id) {
+          const uid = s.user.id;
+          // Evitar duplicados: no insertar si ya hay un LOGIN en los últimos 30 min
+          const hace30min = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+          const { data: reciente } = await supabase
+            .from('auditoria')
+            .select('id')
+            .eq('trabajador_id', uid)
+            .eq('accion', 'LOGIN')
+            .gte('created_at', hace30min)
+            .limit(1);
+          if (!reciente || reciente.length === 0) {
+            await supabase.from('auditoria').insert({
+              trabajador_id: uid,
+              accion: 'LOGIN',
+              tabla_afectada: null,
+              detalle: { origen: 'web' },
+            });
+          }
+        }
+      } catch (_) {
+        // Error de auditoría ignorado: no debe afectar el inicio de sesión
+      }
       router.replace('/');
     }
   }
