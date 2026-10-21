@@ -8,6 +8,8 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import { verPdfPermiso, descargarPdfPermiso } from '@/lib/solicitudPdf';
 import {
   cumpleEnAnio,
+  hoyISO,
+  anioObjetivo,
   rangoFeriados,
   opcionesCumple,
   etiquetaFecha,
@@ -70,7 +72,11 @@ export default function Solicitudes() {
 
   const tipoSel = tipos.find((t) => String(t.id) === String(form.tipo_permiso_id));
   const esCumple = !!tipoSel?.es_cumpleanos;
-  const anioCumple = new Date().getFullYear();
+  const hoy = hoyISO();
+  // Si el cumpleaños de este año ya pasó, se pide el del año siguiente.
+  const anioCumple = perfil?.fecha_nacimiento
+    ? anioObjetivo(perfil.fecha_nacimiento, hoy)
+    : new Date().getFullYear();
   const yaTieneCumple = lista.some(
     (s) => s.anio_beneficio === anioCumple && ['pendiente', 'aprobada'].includes(s.estado)
   );
@@ -105,14 +111,24 @@ export default function Solicitudes() {
     (async () => {
       const cumpleISO = cumpleEnAnio(perfil.fecha_nacimiento, anioCumple);
       const { desde, hasta } = rangoFeriados(cumpleISO);
-      const { data } = await supabase
-        .from('feriados')
-        .select('fecha')
-        .gte('fecha', desde)
-        .lte('fecha', hasta);
+      const [{ data }, { count: feriadosDelAnio }] = await Promise.all([
+        supabase.from('feriados').select('fecha').gte('fecha', desde).lte('fecha', hasta),
+        supabase
+          .from('feriados')
+          .select('fecha', { count: 'exact', head: true })
+          .gte('fecha', `${anioCumple}-01-01`)
+          .lte('fecha', `${anioCumple}-12-31`),
+      ]);
       if (cancelado) return;
+      if (!feriadosDelAnio) {
+        setCumple({
+          error: `Aún no están cargados los feriados de ${anioCumple}. Avisa a RR.HH. para poder pedir este beneficio.`,
+        });
+        return;
+      }
       const feriados = new Set((data || []).map((f) => f.fecha));
-      const opciones = opcionesCumple(cumpleISO, feriados);
+      // Solo días desde hoy en adelante.
+      const opciones = opcionesCumple(cumpleISO, feriados).filter((f) => f >= hoy);
       setCumple({ cumpleISO, opciones });
       // Primera opción: el mismo día del cumpleaños, si es hábil.
       setForm((f) => ({
@@ -127,7 +143,7 @@ export default function Solicitudes() {
     return () => {
       cancelado = true;
     };
-  }, [esCumple, perfil?.id]);
+  }, [esCumple, perfil?.id, anioCumple]);
 
   async function enviar(e) {
     e.preventDefault();
@@ -242,7 +258,7 @@ export default function Solicitudes() {
             {cumple?.opciones && !yaTieneCumple && (
               <>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Es un día completo de permiso. Puedes tomarlo el día de tu cumpleaños (si es día
+                  Beneficio de cumpleaños {anioCumple}. Es un día completo de permiso. Puedes tomarlo el día de tu cumpleaños (si es día
                   hábil) o elegir otro día hábil hasta 5 días hábiles antes o después.
                 </p>
                 <div>

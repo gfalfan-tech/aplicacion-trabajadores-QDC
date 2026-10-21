@@ -94,6 +94,11 @@ begin
     raise exception 'El beneficio de cumpleaños es de un solo día.';
   end if;
 
+  if (tg_op = 'INSERT' or new.fecha_desde is distinct from old.fecha_desde)
+     and new.fecha_desde < (now() at time zone 'America/Santiago')::date then
+    raise exception 'El día elegido no puede ser una fecha pasada.';
+  end if;
+
   if not es_dia_habil(new.fecha_desde) then
     raise exception 'El día elegido debe ser un día hábil (lunes a viernes, sin feriados).';
   end if;
