@@ -6,6 +6,14 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import { verPdfPermiso, descargarPdfPermiso } from '@/lib/solicitudPdf';
+import {
+  cumpleEnAnio,
+  rangoFeriados,
+  opcionesCumple,
+  etiquetaFecha,
+} from '@/lib/cumpleanos';
+
+const MOTIVO_CUMPLE = 'Beneficio día de cumpleaños';
 
 const estadoStyle = {
   pendiente: 'bg-amber-100 text-amber-800',
@@ -58,6 +66,14 @@ export default function Solicitudes() {
   });
   const [enviando, setEnviando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [cumple, setCumple] = useState(null); // { cumpleISO, opciones } | { error }
+
+  const tipoSel = tipos.find((t) => String(t.id) === String(form.tipo_permiso_id));
+  const esCumple = !!tipoSel?.es_cumpleanos;
+  const anioCumple = new Date().getFullYear();
+  const yaTieneCumple = lista.some(
+    (s) => s.anio_beneficio === anioCumple && ['pendiente', 'aprobada'].includes(s.estado)
+  );
 
   async function cargar() {
     const { data: t } = await supabase.from('tipos_permiso').select('*').order('nombre');
@@ -74,9 +90,59 @@ export default function Solicitudes() {
     if (perfil) cargar();
   }, [perfil?.id]);
 
+  // Al elegir "Beneficio día de cumpleaños": arma las fechas posibles
+  // (el cumpleaños si es hábil, y 5 días hábiles antes y después).
+  useEffect(() => {
+    if (!esCumple || !perfil) {
+      setCumple(null);
+      return;
+    }
+    if (!perfil.fecha_nacimiento) {
+      setCumple({ error: 'No tienes fecha de nacimiento registrada. Contacta a RR.HH.' });
+      return;
+    }
+    let cancelado = false;
+    (async () => {
+      const cumpleISO = cumpleEnAnio(perfil.fecha_nacimiento, anioCumple);
+      const { desde, hasta } = rangoFeriados(cumpleISO);
+      const { data } = await supabase
+        .from('feriados')
+        .select('fecha')
+        .gte('fecha', desde)
+        .lte('fecha', hasta);
+      if (cancelado) return;
+      const feriados = new Set((data || []).map((f) => f.fecha));
+      const opciones = opcionesCumple(cumpleISO, feriados);
+      setCumple({ cumpleISO, opciones });
+      // Primera opción: el mismo día del cumpleaños, si es hábil.
+      setForm((f) => ({
+        ...f,
+        fecha_desde: opciones.includes(cumpleISO) ? cumpleISO : '',
+        fecha_hasta: opciones.includes(cumpleISO) ? cumpleISO : '',
+        hora_desde: '',
+        hora_hasta: '',
+        motivo: MOTIVO_CUMPLE,
+      }));
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [esCumple, perfil?.id]);
+
   async function enviar(e) {
     e.preventDefault();
     setMensaje('');
+
+    if (esCumple) {
+      if (yaTieneCumple) {
+        setMensaje(`Ya tienes una solicitud de este beneficio para ${anioCumple}.`);
+        return;
+      }
+      if (!form.fecha_desde || !cumple?.opciones?.includes(form.fecha_desde)) {
+        setMensaje('Elige el día que quieres tomar.');
+        return;
+      }
+    }
 
     // Validaciones antes de mandarlo a la base — así se ve un mensaje claro
     // en vez del error crudo de la restricción de la tabla (que hoy dice
@@ -103,16 +169,18 @@ export default function Solicitudes() {
         tipo_permiso_id: Number(form.tipo_permiso_id),
         fecha_desde: form.fecha_desde,
         fecha_hasta: form.fecha_hasta,
-        hora_desde: form.hora_desde,
-        hora_hasta: form.hora_hasta,
-        motivo: form.motivo,
+        hora_desde: esCumple ? null : form.hora_desde,
+        hora_hasta: esCumple ? null : form.hora_hasta,
+        motivo: esCumple ? MOTIVO_CUMPLE : form.motivo,
       })
       .select()
       .single();
     setEnviando(false);
     if (error) {
       setMensaje(
-        error.message.includes('solicitudes_permiso_check')
+        error.message.includes('ux_cumpleanos_uno_por_anio')
+          ? `Ya tienes una solicitud de este beneficio para ${anioCumple}.`
+          : error.message.includes('solicitudes_permiso_check')
           ? 'Revisa las fechas y horas — la fecha/hora "hasta" debe ser igual o posterior a la de "desde".'
           : 'Error: ' + error.message
       );
@@ -162,6 +230,44 @@ export default function Solicitudes() {
             </option>
           ))}
         </select>
+        {esCumple && (
+          <div className="space-y-3">
+            {cumple?.error && <p className="text-xs text-red-600">{cumple.error}</p>}
+            {!cumple?.error && yaTieneCumple && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg p-3">
+                Ya tienes una solicitud de este beneficio para {anioCumple} (pendiente o aprobada).
+                Solo se puede una vez al año.
+              </p>
+            )}
+            {cumple?.opciones && !yaTieneCumple && (
+              <>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Es un día completo de permiso. Puedes tomarlo el día de tu cumpleaños (si es día
+                  hábil) o elegir otro día hábil hasta 5 días hábiles antes o después.
+                </p>
+                <div>
+                  <label className="text-xs text-slate-500">Día elegido</label>
+                  <select
+                    required
+                    value={form.fecha_desde}
+                    onChange={(e) =>
+                      setForm({ ...form, fecha_desde: e.target.value, fecha_hasta: e.target.value })
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value="">Elige un día</option>
+                    {cumple.opciones.map((f) => (
+                      <option key={f} value={f}>
+                        {etiquetaFecha(f, cumple.cumpleISO)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {!esCumple && (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-500">Fecha desde</label>
@@ -184,6 +290,8 @@ export default function Solicitudes() {
             />
           </div>
         </div>
+        )}
+        {!esCumple && (
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-500">Hora desde</label>
@@ -206,6 +314,8 @@ export default function Solicitudes() {
             />
           </div>
         </div>
+        )}
+        {!esCumple && (
         <textarea
           value={form.motivo}
           onChange={(e) => setForm({ ...form, motivo: e.target.value })}
@@ -213,8 +323,9 @@ export default function Solicitudes() {
           rows={2}
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
         />
+        )}
         <button
-          disabled={enviando}
+          disabled={enviando || (esCumple && (yaTieneCumple || !!cumple?.error))}
           className="w-full bg-[#0F5C8C] text-white font-bold rounded-lg py-2 text-sm"
         >
           {enviando ? 'Enviando…' : 'Enviar solicitud'}
