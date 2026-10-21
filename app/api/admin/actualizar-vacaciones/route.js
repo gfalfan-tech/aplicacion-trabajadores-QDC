@@ -37,6 +37,39 @@ export async function POST(req) {
 
   const admin = createClient(supabaseUrl, serviceKey);
 
+  // Pendientes de períodos anteriores: el formulario de edición NO manda este
+  // dato (solo la carga del Excel lo trae). Antes se guardaba `|| 0` y cada
+  // edición borraba los pendientes del trabajador (le pasó a Lorena Carriel y
+  // a Matías Del Campo), rompiendo el orden de descuento (primero lo más
+  // antiguo). Ahora, si no viene en la petición, se conserva el valor guardado.
+  //
+  // Como esta edición mueve la fecha de corte a hoy, a lo guardado se le
+  // restan los días ya usados desde el corte anterior (consumo FIFO: lo
+  // usado se come primero los pendientes anteriores), para que el desglose
+  // quede igual que se veía antes de editar.
+  let pendientesAnteriores = body.pendiente_periodos_anteriores;
+  if (pendientesAnteriores == null) {
+    const { data: actual } = await admin
+      .from('vacaciones_saldo_inicial')
+      .select('fecha_corte, pendiente_periodos_anteriores')
+      .eq('trabajador_id', body.trabajador_id)
+      .maybeSingle();
+    const guardado = Number(actual?.pendiente_periodos_anteriores) || 0;
+    let usados = 0;
+    if (guardado > 0 && actual?.fecha_corte) {
+      const { data: aprobadas } = await admin
+        .from('solicitudes_vacaciones')
+        .select('dias_habiles')
+        .eq('trabajador_id', body.trabajador_id)
+        .eq('estado', 'aprobada')
+        .gt('fecha_desde', actual.fecha_corte);
+      usados = (aprobadas || []).reduce((suma, s) => suma + (Number(s.dias_habiles) || 0), 0);
+    }
+    pendientesAnteriores = Math.max(0, guardado - usados);
+  }
+  // Los pendientes anteriores no pueden ser más que el saldo base.
+  pendientesAnteriores = Math.min(pendientesAnteriores, Number(body.dias_pendientes_base) || 0);
+
   const ahora = new Date();
   const { error } = await admin.from('vacaciones_saldo_inicial').upsert(
     {
@@ -52,7 +85,7 @@ export async function POST(req) {
       // supabase/migrations/vacaciones_progresivo_aniversario.sql) — se
       // deja vacía/null si el trabajador todavía no tiene progresivos.
       proximo_dia_progresivo_fecha: body.proximo_dia_progresivo_fecha || null,
-      pendiente_periodos_anteriores: body.pendiente_periodos_anteriores || 0,
+      pendiente_periodos_anteriores: pendientesAnteriores,
     },
     { onConflict: 'trabajador_id' }
   );
