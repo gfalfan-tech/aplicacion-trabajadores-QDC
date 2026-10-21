@@ -192,6 +192,17 @@ export default function CajaChicaVista() {
         </div>
       ) : (
         <>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-slate-400 tracking-wide">
+              CAJA CHICA · FOLIO {String(periodo.folio || 0).padStart(4, '0')}
+            </p>
+            {periodo.rendicion_aprobada_at && (
+              <span className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-purple-100 text-purple-800">
+                Rendición aprobada — esperando reintegro
+              </span>
+            )}
+          </div>
+
           {/* Totales */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
@@ -221,7 +232,15 @@ export default function CajaChicaVista() {
           )}
 
           {/* Solicitar compra */}
-          {(esJefatura || esRRHH) && (
+          {periodo.rendicion_aprobada_at && (
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-4">
+              <p className="text-xs text-purple-900">
+                La rendición de esta caja ya fue aprobada y se está esperando el reintegro del dinero. No se
+                pueden hacer nuevas solicitudes hasta que RR.HH. registre la recarga.
+              </p>
+            </div>
+          )}
+          {(esJefatura || esRRHH) && !periodo.rendicion_aprobada_at && (
             <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4">
               {mostrarFormSolicitud ? (
                 <div className="space-y-2">
@@ -581,6 +600,7 @@ export default function CajaChicaVista() {
         <ModalReporteCajaChica
           reporte={reporte}
           onCerrar={() => setReporte(null)}
+          onCambio={cargar}
           onRecargado={() => {
             setReporte(null);
             cargar();

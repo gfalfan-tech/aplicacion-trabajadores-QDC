@@ -44,6 +44,16 @@ export async function POST(req) {
     );
   }
 
+  if (periodo.rendicion_aprobada_at) {
+    return NextResponse.json(
+      {
+        error:
+          'La rendición de esta caja ya fue aprobada y se está esperando el reintegro. No se pueden hacer más solicitudes hasta que se recargue la caja.',
+      },
+      { status: 400 }
+    );
+  }
+
   // No se puede solicitar más de lo que hay disponible físicamente en la
   // caja en este momento — se recalcula desde cero con todas las
   // solicitudes del período, igual que hace la pantalla de totales.
