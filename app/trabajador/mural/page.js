@@ -8,6 +8,7 @@ import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import MuralInteracciones from '@/components/MuralInteracciones';
 import Avatar from '@/components/Avatar';
+import VisorImagen from '@/components/VisorImagen';
 
 const iconos = { circular: '📢', imagen: '🖼️', curso: '🎓', comunicado: '📰' };
 
@@ -36,11 +37,7 @@ function MuralTrabajadorContenido() {
   const searchParams = useSearchParams();
   const postDestacado = searchParams.get('post');
   const [lista, setLista] = useState([]);
-  const [ampliadas, setAmpliadas] = useState({});
 
-  function toggleAmpliada(id) {
-    setAmpliadas((a) => ({ ...a, [id]: !a[id] }));
-  }
 
   useEffect(() => {
     const hoy = new Date().toISOString().slice(0, 10);
@@ -84,13 +81,10 @@ function MuralTrabajadorContenido() {
                 <p className="text-base font-bold text-[#153A5B] mt-2">{p.titulo}</p>
                 <p className="text-sm text-slate-500 mt-1">{p.contenido}</p>
                 {p.imagen_url && (
-                  <img
+                  <VisorImagen
                     src={p.imagen_url}
                     alt={p.titulo}
-                    onClick={() => toggleAmpliada(p.id)}
-                    className={`mt-2 rounded-lg border border-slate-200 max-w-full h-auto object-contain bg-slate-50 cursor-zoom-in transition-all ${
-                      ampliadas[p.id] ? 'max-h-[80vh] cursor-zoom-out' : 'max-h-[560px]'
-                    }`}
+                    className="mt-2 rounded-lg border border-slate-200 max-w-full h-auto max-h-[560px] object-contain bg-slate-50"
                   />
                 )}
                 {perfil && (
