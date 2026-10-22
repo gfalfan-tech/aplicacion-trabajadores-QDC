@@ -39,6 +39,7 @@ export default function TrabajadorHome() {
   const [pendientes, setPendientes] = useState(0);
   const [cumples, setCumples] = useState([]);
   const [mural, setMural] = useState([]);
+  const [muralNuevas, setMuralNuevas] = useState(0);
 
   useEffect(() => {
     if (!perfil) return;
@@ -70,6 +71,27 @@ export default function TrabajadorHome() {
       .order('publicado_en', { ascending: false })
       .limit(1)
       .then(({ data }) => setMural(data || []));
+
+    // Aviso de publicaciones nuevas del mural (sin leer). Si la tabla
+    // mural_lecturas aún no existe, simplemente no se muestra el aviso.
+    supabase
+      .from('mural_lecturas')
+      .select('visto_hasta')
+      .eq('trabajador_id', perfil.id)
+      .maybeSingle()
+      .then(async ({ data: lectura, error }) => {
+        if (error) return;
+        const desde =
+          lectura?.visto_hasta || new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+        const { data: nuevas, error: errNuevas } = await supabase
+          .from('publicaciones_mural')
+          .select('id, publicado_por')
+          .gt('publicado_en', desde)
+          .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
+          .limit(50);
+        if (errNuevas) return;
+        setMuralNuevas((nuevas || []).filter((p) => p.publicado_por !== perfil.id).length);
+      });
   }, [perfil?.id]);
 
   if (!perfil) return null;
@@ -125,8 +147,19 @@ export default function TrabajadorHome() {
           <p className="text-sm font-bold text-[#153A5B]">Reglamento y políticas</p>
         </Link>
         <Link href="/trabajador/mural" className="bg-white border border-slate-200 rounded-2xl p-4">
-          <p className="text-2xl mb-2">📰</p>
+          <div className="relative inline-block mb-2">
+            <p className="text-2xl">📰</p>
+            {muralNuevas > 0 && (
+              <span
+                aria-label={`${muralNuevas} publicaciones nuevas`}
+                className="absolute -top-2 -right-4 min-w-[22px] h-[22px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white animate-pulse"
+              >
+                {muralNuevas > 9 ? '9+' : muralNuevas}
+              </span>
+            )}
+          </div>
           <p className="text-sm font-bold text-[#153A5B]">Diario mural</p>
+          {muralNuevas > 0 && <p className="text-[11px] font-semibold text-red-500">¡Hay novedades!</p>}
         </Link>
         {esJefatura && (
           <Link
