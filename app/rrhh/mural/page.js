@@ -64,6 +64,25 @@ function MuralRRHHContenido() {
     cargar();
   }, []);
 
+  // Marca el mural como visto (apaga el aviso del inicio). Si la tabla
+  // mural_lecturas aún no existe, no pasa nada.
+  useEffect(() => {
+    if (!perfil?.id || lista.length === 0) return;
+    const masReciente = lista[0]?.publicado_en;
+    if (!masReciente) return;
+    supabase
+      .from('mural_lecturas')
+      .upsert(
+        {
+          trabajador_id: perfil.id,
+          visto_hasta: masReciente,
+          actualizado_en: new Date().toISOString(),
+        },
+        { onConflict: 'trabajador_id' }
+      )
+      .then(() => {});
+  }, [perfil?.id, lista]);
+
   useEffect(() => {
     if (!postDestacado || lista.length === 0) return;
     const el = document.getElementById(`post-${postDestacado}`);

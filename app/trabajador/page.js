@@ -85,12 +85,12 @@ export default function TrabajadorHome() {
           lectura?.visto_hasta || new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
         const { data: nuevas, error: errNuevas } = await supabase
           .from('publicaciones_mural')
-          .select('id, publicado_por')
+          .select('id')
           .gt('publicado_en', desde)
           .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
           .limit(50);
         if (errNuevas) return;
-        setMuralNuevas((nuevas || []).filter((p) => p.publicado_por !== perfil.id).length);
+        setMuralNuevas((nuevas || []).length);
       });
   }, [perfil?.id]);
 
