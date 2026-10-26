@@ -6,6 +6,7 @@ import { configurarFuentes } from '@/lib/tarjetas/fontSetup';
 import { construirTemasCumpleanos } from '@/lib/tarjetas/temasCumpleanos';
 import { construirSvgCumpleanos } from '@/lib/tarjetas/tarjetaCumpleanos';
 import { construirSvgAniversario } from '@/lib/tarjetas/tarjetaAniversario';
+import { DIAS_VIGENCIA_CELEBRACION, fechaLarga, sumarDiasISO } from '@/lib/fechaCelebracion';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,11 +73,13 @@ export async function GET(req) {
   configurarFuentes();
 
   const { anio: anioActual, mes: mesHoy, dia: diaHoy } = hoyChile();
-  // La publicación debe durar solo el día de la celebración: se guarda como
-  // fecha de expiración el propio día de hoy, porque el mural muestra un
-  // post mientras fecha_expiracion >= hoy y deja de mostrarlo al día
-  // siguiente (ver app/trabajador/mural/page.js y app/trabajador/page.js).
-  const fechaExpiracionISO = `${anioActual}-${String(mesHoy).padStart(2, '0')}-${String(diaHoy).padStart(2, '0')}`;
+  // La publicación dura DIAS_VIGENCIA_CELEBRACION días contando el día de la
+  // celebración (5 → hoy + 4 días). El mural muestra un post mientras
+  // fecha_expiracion >= hoy (ver app/trabajador/mural/page.js y
+  // app/trabajador/page.js). El saludo incluye la fecha exacta, para que quien
+  // lo vea más tarde sepa qué día fue la celebración.
+  const fechaExpiracionISO = sumarDiasISO(anioActual, mesHoy, diaHoy, DIAS_VIGENCIA_CELEBRACION - 1);
+  const fechaTexto = fechaLarga(mesHoy, diaHoy);
 
   const { data: publicador } = await admin
     .from('trabajadores')
@@ -123,7 +126,7 @@ export async function GET(req) {
         const nombre = nombreCorto(t.nombre_completo);
         const indicePlantilla = (contadorPlantilla % 20) + 1;
         const tema = temas[indicePlantilla - 1];
-        const svg = construirSvgCumpleanos(tema, nombre, logoBase64);
+        const svg = construirSvgCumpleanos(tema, nombre, logoBase64, fechaTexto);
         const buffer = await sharp(Buffer.from(svg)).png().toBuffer();
         const nombreArchivo = `auto_cumpleanos_${t.id}_${anioActual}_${Date.now()}.png`;
         const imagenUrl = await subirImagen(admin, buffer, nombreArchivo);
@@ -132,7 +135,7 @@ export async function GET(req) {
           .from('publicaciones_mural')
           .insert({
             titulo: `¡Feliz cumpleaños, ${nombre}!`,
-            contenido: 'Los colaboradores de QDC te desean un muy lindo día. ¡Felicidades!',
+            contenido: `El ${fechaTexto} es el cumpleaños de ${nombre}. Los colaboradores de QDC te desean un muy lindo día. ¡Felicidades!`,
             tipo: 'imagen',
             imagen_url: imagenUrl,
             fecha_expiracion: fechaExpiracionISO,
@@ -173,7 +176,7 @@ export async function GET(req) {
       if (anios >= 1) {
         try {
           const nombre = nombreCorto(t.nombre_completo);
-          const svg = construirSvgAniversario(nombre, anios, logoBase64);
+          const svg = construirSvgAniversario(nombre, anios, logoBase64, fechaTexto);
           const buffer = await sharp(Buffer.from(svg)).png().toBuffer();
           const nombreArchivo = `auto_aniversario_${t.id}_${anioActual}_${Date.now()}.png`;
           const imagenUrl = await subirImagen(admin, buffer, nombreArchivo);
@@ -182,7 +185,7 @@ export async function GET(req) {
             .from('publicaciones_mural')
             .insert({
               titulo: `¡Feliz aniversario, ${nombre}!`,
-              contenido: `Hoy celebra ${anios} ${anios === 1 ? 'año' : 'años'} como parte del equipo QDC. ¡Gracias por tu compromiso y dedicación!`,
+              contenido: `El ${fechaTexto} ${nombre} celebra ${anios} ${anios === 1 ? 'año' : 'años'} como parte del equipo QDC. ¡Gracias por tu compromiso y dedicación!`,
               tipo: 'imagen',
               imagen_url: imagenUrl,
               fecha_expiracion: fechaExpiracionISO,
