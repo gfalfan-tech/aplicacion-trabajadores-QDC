@@ -29,6 +29,9 @@ const vacio = {
   roles: ['trabajador'],
 };
 
+const ROLES_ASIGNABLES = ['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos', 'publicar_mural'];
+const ETIQUETA_ROL = { rendicion_gastos: 'rendición de gastos', publicar_mural: 'publicar en el diario mural' };
+
 export default function TrabajadoresRRHH() {
   const { roles, perfil, recargarPerfil } = useAuth();
   const esAdministrador = roles.includes('administrador');
@@ -558,10 +561,10 @@ export default function TrabajadoresRRHH() {
           <div>
             <label className="text-xs text-slate-500 block mb-1">Roles</label>
             <div className="flex gap-3 flex-wrap">
-              {['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos'].map((r) => (
+              {ROLES_ASIGNABLES.map((r) => (
                 <label key={r} className="flex items-center gap-1 text-xs">
                   <input type="checkbox" checked={form.roles.includes(r)} onChange={() => toggleRol(r)} />
-                  {r === 'rendicion_gastos' ? 'rendición de gastos' : r}
+                  {ETIQUETA_ROL[r] || r}
                 </label>
               ))}
             </div>
@@ -853,14 +856,14 @@ export default function TrabajadoresRRHH() {
                 <div>
                   <label className="text-xs text-slate-500 block mb-1">Nivel de acceso (roles)</label>
                   <div className="flex gap-3 flex-wrap">
-                    {['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos'].map((r) => (
+                    {ROLES_ASIGNABLES.map((r) => (
                       <label key={r} className="flex items-center gap-1 text-xs">
                         <input
                           type="checkbox"
                           checked={editForm.roles.includes(r)}
                           onChange={() => toggleRolEdit(r)}
                         />
-                        {r === 'rendicion_gastos' ? 'rendición de gastos' : r}
+                        {ETIQUETA_ROL[r] || r}
                       </label>
                     ))}
                   </div>

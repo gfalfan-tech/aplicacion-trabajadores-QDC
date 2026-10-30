@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import MuralInteracciones from '@/components/MuralInteracciones';
+import FormPublicarMural from '@/components/FormPublicarMural';
 import Avatar from '@/components/Avatar';
 import VisorImagen from '@/components/VisorImagen';
 
@@ -33,13 +34,14 @@ export default function MuralTrabajador() {
 }
 
 function MuralTrabajadorContenido() {
-  const { perfil } = useAuth();
+  const { perfil, roles } = useAuth();
+  const puedePublicar = roles?.includes('publicar_mural');
   const searchParams = useSearchParams();
   const postDestacado = searchParams.get('post');
   const [lista, setLista] = useState([]);
 
 
-  useEffect(() => {
+  function cargar() {
     const hoy = new Date().toISOString().slice(0, 10);
     supabase
       .from('publicaciones_mural')
@@ -47,7 +49,17 @@ function MuralTrabajadorContenido() {
       .or(`fecha_expiracion.is.null,fecha_expiracion.gte.${hoy}`)
       .order('publicado_en', { ascending: false })
       .then(({ data }) => setLista(data || []));
+  }
+
+  useEffect(() => {
+    cargar();
   }, []);
+
+  async function eliminar(id) {
+    if (!window.confirm('¿Eliminar esta publicación?')) return;
+    await supabase.from('publicaciones_mural').delete().eq('id', id);
+    cargar();
+  }
 
   // Marca el mural como visto hasta la publicación más reciente en pantalla
   // (apaga el aviso del inicio). Si la tabla aún no existe, no pasa nada.
@@ -78,6 +90,8 @@ function MuralTrabajadorContenido() {
 
   return (
     <AppShell links={trabajadorLinks} titulo="Diario mural">
+      {puedePublicar && perfil && <FormPublicarMural trabajadorId={perfil.id} onPublicado={cargar} />}
+
       <div className="space-y-3">
         {lista.map((p) => (
           <div
@@ -95,6 +109,14 @@ function MuralTrabajadorContenido() {
                     {p.trabajadores?.nombre_completo || 'Gestión RRHH'}
                   </p>
                   <span className="text-sm">{iconos[p.tipo] || '📰'}</span>
+                  {puedePublicar && p.publicado_por === perfil?.id && (
+                    <button
+                      onClick={() => eliminar(p.id)}
+                      className="ml-auto text-xs font-bold text-red-700 bg-red-100 rounded-lg px-3 py-1"
+                    >
+                      Eliminar
+                    </button>
+                  )}
                 </div>
                 <p className="text-[10px] text-slate-400">{tiempoRelativoPost(p.publicado_en)}</p>
                 <p className="text-base font-bold text-[#153A5B] mt-2">{p.titulo}</p>
