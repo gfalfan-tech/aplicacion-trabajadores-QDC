@@ -5,7 +5,8 @@ import { enviarCorreo } from '@/lib/enviarCorreo';
 import { correoCajaChicaNueva } from '@/lib/plantillasCorreo';
 
 // Crea una nueva solicitud de compra contra el período de caja chica
-// abierto. Solo jefatura, RR.HH. y administrador pueden solicitar.
+// abierto. Pueden solicitar jefatura, RR.HH./administrador y quien tenga el rol
+// 'caja_chica'.
 export async function POST(req) {
   let auth;
   try {
@@ -13,9 +14,9 @@ export async function POST(req) {
   } catch (e) {
     return NextResponse.json({ error: e.error }, { status: e.status });
   }
-  const { admin, user, esRRHH, esJefatura } = auth;
+  const { admin, user, esRRHH, esJefatura, tieneCajaChica } = auth;
 
-  if (!esRRHH && !esJefatura) {
+  if (!esRRHH && !esJefatura && !tieneCajaChica) {
     return NextResponse.json({ error: 'No tienes acceso a Caja Chica.' }, { status: 403 });
   }
 
@@ -64,11 +65,14 @@ export async function POST(req) {
 
   const totalesActuales = calcularTotales(periodo, solicitudesDelPeriodo || []);
   if (monto > totalesActuales.disponible) {
+    const soloPropio = !esRRHH && !esJefatura;
     return NextResponse.json(
       {
-        error: `El monto solicitado (${formatearCLP(monto)}) supera el total disponible en caja chica (${formatearCLP(
-          totalesActuales.disponible
-        )}). Ajusta el monto o espera a que se recargue el fondo.`,
+        error: soloPropio
+          ? `El monto solicitado (${formatearCLP(monto)}) supera lo que hay disponible hoy en caja chica. Pide un monto menor o espera a que se recargue el fondo.`
+          : `El monto solicitado (${formatearCLP(monto)}) supera el total disponible en caja chica (${formatearCLP(
+              totalesActuales.disponible
+            )}). Ajusta el monto o espera a que se recargue el fondo.`,
       },
       { status: 400 }
     );

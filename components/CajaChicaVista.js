@@ -203,7 +203,8 @@ export default function CajaChicaVista() {
             )}
           </div>
 
-          {/* Totales */}
+          {/* Totales (no se muestran a quien solo tiene el rol 'caja_chica') */}
+          {totales && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <p className="text-xs text-slate-500">Total disponible</p>
@@ -214,7 +215,8 @@ export default function CajaChicaVista() {
               <p className="text-xl font-bold text-[#153A5B]">{formatearCLP(totales.enProceso)}</p>
             </div>
           </div>
-          {esRRHH && (totales.vueltoPendiente > 0 || totales.deudorPendiente > 0) && (
+          )}
+          {esRRHH && totales && (totales.vueltoPendiente > 0 || totales.deudorPendiente > 0) && (
             <div className="grid grid-cols-2 gap-3 mb-4">
               {totales.vueltoPendiente > 0 && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
@@ -240,7 +242,7 @@ export default function CajaChicaVista() {
               </p>
             </div>
           )}
-          {(esJefatura || esRRHH) && !periodo.rendicion_aprobada_at && (
+          {!periodo.rendicion_aprobada_at && (
             <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4">
               {mostrarFormSolicitud ? (
                 <div className="space-y-2">

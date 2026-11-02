@@ -33,7 +33,7 @@ function formatearFechaCorta(fechaISO) {
 }
 
 export default function TrabajadorHome() {
-  const { perfil, roles, esJefatura, esRRHH } = useAuth();
+  const { perfil, roles, esJefatura, esRRHH, accesoCajaChica } = useAuth();
   const tieneRendicionGastos = roles?.includes('rendicion_gastos');
   const [saldo, setSaldo] = useState(null);
   const [pendientes, setPendientes] = useState(0);
@@ -170,7 +170,7 @@ export default function TrabajadorHome() {
             <p className="text-sm font-bold text-[#153A5B]">Mi equipo — asistencia del mes</p>
           </Link>
         )}
-        {(esJefatura || esRRHH) && (
+        {accesoCajaChica && (
           <Link
             href="/trabajador/caja-chica"
             className="bg-white border border-slate-200 rounded-2xl p-4 col-span-2"

@@ -13,11 +13,16 @@ export async function GET(req) {
   } catch (e) {
     return NextResponse.json({ error: e.error }, { status: e.status });
   }
-  const { admin, user, esRRHH, esJefatura } = auth;
+  const { admin, user, esRRHH, esJefatura, tieneCajaChica } = auth;
 
-  if (!esRRHH && !esJefatura) {
+  if (!esRRHH && !esJefatura && !tieneCajaChica) {
     return NextResponse.json({ error: 'No tienes acceso a Caja Chica.' }, { status: 403 });
   }
+
+  // Quien entra solo por el rol 'caja_chica' (trabajador común, ni jefatura ni
+  // RR.HH.) ve únicamente sus propias solicitudes: no ve las de otros, ni los
+  // totales / saldo del fondo, ni la lista de aprobadores de respaldo.
+  const soloPropio = !esRRHH && !esJefatura;
 
   const { data: periodo } = await admin
     .from('caja_chica_periodos')
@@ -32,7 +37,7 @@ export async function GET(req) {
       .select('*')
       .eq('periodo_id', periodo.id)
       .order('created_at', { ascending: false });
-    solicitudes = data || [];
+    solicitudes = (data || []).filter((s) => !soloPropio || s.solicitante_id === user.id);
   }
 
   const { data: trabajadores } = await admin
@@ -93,7 +98,7 @@ export async function GET(req) {
     };
   });
 
-  const totales = calcularTotales(periodo, solicitudes);
+  const totales = soloPropio ? null : calcularTotales(periodo, solicitudes);
 
   let aprobadoresRespaldo = [];
   if (esRRHH) {
@@ -104,7 +109,12 @@ export async function GET(req) {
   }
 
   return NextResponse.json({
-    periodo,
+    // Para soloPropio no se expone el fondo inicial ni datos de quién abrió la caja.
+    periodo:
+      soloPropio && periodo
+        ? { id: periodo.id, folio: periodo.folio, rendicion_aprobada_at: periodo.rendicion_aprobada_at }
+        : periodo,
+    soloPropio,
     solicitudes: solicitudesEnriquecidas,
     totales,
     esRRHH,
