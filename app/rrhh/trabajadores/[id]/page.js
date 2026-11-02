@@ -81,6 +81,12 @@ export default function VerPerfilTrabajador() {
   const [guardandoVacacion, setGuardandoVacacion] = useState(false);
   const [errorVacacion, setErrorVacacion] = useState('');
 
+  // Cancelar un permiso ya aprobado (por ejemplo, si se aprobó por error).
+  const [permisoActivo, setPermisoActivo] = useState(null);
+  const [motivoPermiso, setMotivoPermiso] = useState('');
+  const [guardandoPermiso, setGuardandoPermiso] = useState(false);
+  const [errorPermiso, setErrorPermiso] = useState('');
+
   useEffect(() => {
     if (!id) return;
     let activo = true;
@@ -274,6 +280,50 @@ export default function VerPerfilTrabajador() {
     }
     await recargarVacaciones();
     cerrarModalVacacion();
+  }
+
+  async function recargarPermisos() {
+    const { data } = await supabase
+      .from('solicitudes_permiso')
+      .select('*, tipos_permiso(nombre)')
+      .eq('trabajador_id', id)
+      .order('created_at', { ascending: false });
+    setPermisos(data || []);
+  }
+
+  function abrirCancelarPermiso(s) {
+    setPermisoActivo(s);
+    setMotivoPermiso('');
+    setErrorPermiso('');
+  }
+
+  function cerrarModalPermiso() {
+    setPermisoActivo(null);
+    setErrorPermiso('');
+  }
+
+  async function guardarCancelacionPermiso() {
+    if (!permisoActivo || !motivoPermiso.trim()) {
+      setErrorPermiso('Debes indicar el motivo de la cancelación.');
+      return;
+    }
+    setGuardandoPermiso(true);
+    setErrorPermiso('');
+    const { data: sesion } = await supabase.auth.getSession();
+    const token = sesion?.session?.access_token;
+    const res = await fetch('/api/admin/cancelar-permiso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ solicitudId: permisoActivo.id, motivo: motivoPermiso.trim() }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setGuardandoPermiso(false);
+    if (!res.ok) {
+      setErrorPermiso(data.error || `Error ${res.status}`);
+      return;
+    }
+    await recargarPermisos();
+    cerrarModalPermiso();
   }
 
   async function recargarLicencias() {
@@ -631,7 +681,22 @@ export default function VerPerfilTrabajador() {
                     >
                       Descargar
                     </button>
+                    {s.estado === 'aprobada' && (
+                      <button
+                        onClick={() => abrirCancelarPermiso(s)}
+                        className="text-xs font-bold text-red-700 bg-red-100 rounded-lg px-3 py-2"
+                      >
+                        Cancelar permiso
+                      </button>
+                    )}
                   </div>
+                  {s.estado === 'cancelada' && s.motivo_edicion && (
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Cancelado por RR.HH.
+                      {s.editado_en ? ` el ${new Date(s.editado_en).toLocaleDateString('es-CL')}` : ''} —{' '}
+                      {s.motivo_edicion}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -683,6 +748,58 @@ export default function VerPerfilTrabajador() {
                   </span>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {permisoActivo && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+          onClick={cerrarModalPermiso}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-sm font-bold text-[#153A5B] mb-1">Cancelar permiso aprobado</p>
+            <p className="text-xs text-slate-500 mb-4">
+              {permisoActivo.tipos_permiso?.nombre} · {permisoActivo.fecha_desde} → {permisoActivo.fecha_hasta}
+            </p>
+
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+              El permiso quedará marcado como "cancelado" (no se borra), saldrá de Respaldos y dejará de
+              justificar la ausencia en el reporte de asistencia.
+            </p>
+
+            <label className="text-xs text-slate-500">Motivo (obligatorio)</label>
+            <textarea
+              value={motivoPermiso}
+              onChange={(e) => setMotivoPermiso(e.target.value)}
+              placeholder="Ej: se aprobó por error…"
+              rows={3}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-1"
+            />
+            <p className="text-[10px] text-slate-400 mb-3">
+              {trabajador?.nombre_completo.split(' ')[0]} va a recibir una notificación con este motivo.
+            </p>
+
+            {errorPermiso && <p className="text-xs text-red-600 mb-3">{errorPermiso}</p>}
+
+            <div className="flex gap-2">
+              <button
+                onClick={cerrarModalPermiso}
+                className="flex-1 text-xs font-bold text-slate-600 border border-slate-200 rounded-lg py-2"
+              >
+                Volver
+              </button>
+              <button
+                onClick={guardarCancelacionPermiso}
+                disabled={guardandoPermiso}
+                className="flex-1 text-xs font-bold text-white bg-red-600 rounded-lg py-2 disabled:opacity-60"
+              >
+                {guardandoPermiso ? 'Guardando…' : 'Confirmar cancelación'}
+              </button>
             </div>
           </div>
         </div>

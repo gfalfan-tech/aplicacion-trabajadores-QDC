@@ -78,5 +78,18 @@ export async function POST(req) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Aviso in-app (campanita + push) al trabajador, igual que en vacaciones y
+  // que cuando se resuelve desde el enlace del correo.
+  await admin.from('notificaciones').insert({
+    trabajador_id: solicitud.trabajador_id,
+    titulo: 'Solicitud de permiso',
+    cuerpo:
+      estado === 'aprobada'
+        ? 'Tu solicitud de permiso fue aprobada.'
+        : 'Tu solicitud de permiso no fue autorizada. Favor dirigirse personalmente con su jefatura.',
+    relacionado_tipo: 'solicitud_permiso',
+    relacionado_id: solicitudId,
+  });
+
   return NextResponse.json({ ok: true });
 }
