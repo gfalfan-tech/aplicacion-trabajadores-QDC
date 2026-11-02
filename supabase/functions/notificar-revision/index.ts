@@ -8,12 +8,14 @@
 // Requiere estas variables de entorno (Project Settings → Edge Functions →
 // Secrets en el dashboard de Supabase):
 //   RESEND_API_KEY   - API key de Resend
+//   RESEND_FROM      - (opcional) remitente, ej: QDC Notificaciones <notificaciones@correo.qdc.cl>
 //   SITE_URL         - URL pública de la app, ej: https://aplicacion-trabajadores-qdc.vercel.app
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY ya vienen dados por Supabase.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+const RESEND_FROM = Deno.env.get('RESEND_FROM') || 'QDC Notificaciones <onboarding@resend.dev>';
 const SITE_URL = Deno.env.get('SITE_URL') || 'https://aplicacion-trabajadores-qdc.vercel.app';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -171,7 +173,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'QDC Notificaciones <onboarding@resend.dev>',
+        from: RESEND_FROM,
         to: [revisor.email],
         subject: asunto,
         html,
