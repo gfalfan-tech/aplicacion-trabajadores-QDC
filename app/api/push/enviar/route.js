@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { rutaDeNotificacion } from '@/lib/notificacionesRuta';
+import { enviarCorreoResultadoSolicitud } from '@/lib/correoResultadoSolicitud';
 
 // Endpoint que llama el Database Webhook de Supabase cada vez que se
 // inserta una fila nueva en "notificaciones". Envía un push real a todos
@@ -43,6 +44,16 @@ export async function POST(req) {
   const record = body?.record;
   if (!record?.trabajador_id) {
     return NextResponse.json({ error: 'Payload inválido.' }, { status: 400 });
+  }
+
+  // Además del push, si es el aviso de resultado de un permiso o de unas
+  // vacaciones, el trabajador también lo recibe por correo. Va antes del
+  // chequeo de suscripciones para que llegue aunque no tenga push activo,
+  // y un fallo del correo nunca impide el push.
+  try {
+    await enviarCorreoResultadoSolicitud(admin, record);
+  } catch (err) {
+    console.error('[push/enviar] Error enviando correo de resultado:', err);
   }
 
   const { data: suscripciones } = await admin
