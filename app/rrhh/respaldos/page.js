@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
+import RespaldosCajaChica from '@/components/RespaldosCajaChica';
 import { rrhhLinks } from '@/lib/navLinks';
 import { obtenerResumenRespaldos } from '@/lib/respaldos';
 import {
@@ -204,8 +205,11 @@ export default function RespaldosAdmin() {
         </>
       )}
 
+      {/* Caja Chica: carpetas por folio + buscador */}
+      {tipo === 'cajaChica' && <RespaldosCajaChica folios={datos.cajaChicaFolios || []} />}
+
       {/* Nivel 1: trabajadores dentro de un tipo */}
-      {tipo && !trabajadorId && (
+      {tipo && tipo !== 'cajaChica' && !trabajadorId && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {agruparPorTrabajador(porTipo[tipo]).length === 0 && (
             <p className="text-sm text-slate-400 col-span-full">Sin documentos en esta carpeta todavía.</p>
@@ -224,7 +228,7 @@ export default function RespaldosAdmin() {
       )}
 
       {/* Nivel 2: meses dentro de un trabajador */}
-      {tipo && trabajadorId && !mes && (
+      {tipo && tipo !== 'cajaChica' && trabajadorId && !mes && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {agruparPorMes(porTipo[tipo].filter((i) => i.trabajador_id === trabajadorId)).map((carpeta) => (
             <CarpetaCard
@@ -240,7 +244,7 @@ export default function RespaldosAdmin() {
       )}
 
       {/* Nivel 3: documentos del mes */}
-      {tipo && trabajadorId && mes && (
+      {tipo && tipo !== 'cajaChica' && trabajadorId && mes && (
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
           {porTipo[tipo]
             .filter((i) => i.trabajador_id === trabajadorId && i.fecha && i.fecha.slice(0, 7) === mes)

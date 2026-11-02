@@ -13,6 +13,7 @@ import {
   obtenerVacacionesPendientesEquipo,
   resolverSolicitudVacaciones,
 } from '@/lib/vacacionesEquipo';
+import { obtenerPermisosPendientesEquipo, resolverSolicitudPermiso } from '@/lib/permisosEquipo';
 
 export default function RRHHHome() {
   const { perfil } = useAuth();
@@ -21,6 +22,7 @@ export default function RRHHHome() {
   const [confirmando, setConfirmando] = useState(null);
   const [traslapes, setTraslapes] = useState(null);
   const [resolviendo, setResolviendo] = useState(false);
+  const [errorCarga, setErrorCarga] = useState('');
 
   async function cargar() {
     const { count: activos } = await supabase
@@ -28,11 +30,15 @@ export default function RRHHHome() {
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'activo');
 
-    const { data: permisos } = await supabase
-      .from('solicitudes_permiso')
-      .select('*, trabajadores(nombre_completo), tipos_permiso(nombre)')
-      .eq('estado', 'pendiente')
-      .order('created_at');
+    // Igual que vacaciones, los permisos se piden a la API del servidor
+    // (/api/permisos/pendientes): evita el error de PostgREST por embeber
+    // "trabajadores" cuando la tabla tiene más de una relación con ella, y
+    // si algo falla se avisa en pantalla en vez de mostrar la lista vacía.
+    setErrorCarga('');
+    const permisos = await obtenerPermisosPendientesEquipo().catch((err) => {
+      setErrorCarga(err.message || 'No se pudieron cargar los permisos pendientes.');
+      return [];
+    });
 
     // Con la doble aprobación de vacaciones, lo que le toca resolver a
     // RR.HH. ya no es un simple ".eq('estado', 'pendiente')" — puede ser
@@ -48,7 +54,7 @@ export default function RRHHHome() {
     });
 
     setPendientes([
-      ...(permisos || []).map((p) => ({ ...p, origen: 'permiso', nombre: p.trabajadores?.nombre_completo })),
+      ...(permisos || []).map((p) => ({ ...p, origen: 'permiso', nombre: p.trabajador_nombre })),
       ...(vacaciones || []).map((v) => ({ ...v, origen: 'vacaciones', nombre: v.trabajador_nombre })),
     ]);
   }
@@ -59,10 +65,15 @@ export default function RRHHHome() {
 
   async function resolver(item, estado) {
     if (item.origen === 'permiso') {
-      await supabase
-        .from('solicitudes_permiso')
-        .update({ estado, aprobado_por: perfil.id, fecha_resolucion: new Date().toISOString() })
-        .eq('id', item.id);
+      // Vía API: deja el comentario de rechazo y avisa al trabajador
+      // (campanita + push), igual que cuando resuelve la jefatura.
+      try {
+        await resolverSolicitudPermiso(item.id, estado);
+      } catch (err) {
+        // Sin recargar, para que el mensaje de error no se borre.
+        setErrorCarga(err.message || 'No se pudo resolver el permiso.');
+        return;
+      }
       cargar();
       return;
     }
@@ -182,7 +193,8 @@ export default function RRHHHome() {
         PENDIENTES DE RR.HH.
       </p>
       <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-        {pendientes.length === 0 && (
+        {errorCarga && <p className="text-xs text-red-700 bg-red-50 p-3">{errorCarga}</p>}
+        {pendientes.length === 0 && !errorCarga && (
           <p className="text-sm text-slate-400 p-4">No hay solicitudes pendientes.</p>
         )}
         {pendientes.map((item) => (

@@ -41,6 +41,7 @@ export async function GET(req) {
 
   return NextResponse.json({
     vistaAnterior,
+    cajaChicaFolios: datos.cajaChicaFolios,
     tipos: {
       permisos: conNuevo(datos.permisos),
       vacaciones: conNuevo(datos.vacaciones),
