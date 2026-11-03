@@ -273,6 +273,9 @@ export default function MiEquipo() {
                         {horas}
                         {s.motivo && ` — ${s.motivo}`}
                       </p>
+                      {s.estado === 'aprobada_jefe' && (
+                        <p className="text-[10px] text-blue-700 mb-2">Ya lo aprobó su jefe directo — falta tu firma.</p>
+                      )}
                       <div className="flex gap-2">
                         <button
                           onClick={() => resolverPermiso(s, 'aprobada')}

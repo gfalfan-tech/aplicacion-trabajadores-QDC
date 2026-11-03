@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import { verPdfPermiso, descargarPdfPermiso } from '@/lib/solicitudPdf';
+import { estadoVacacionesLabel } from '@/lib/estadoVacaciones';
 import {
   cumpleEnAnio,
   hoyISO,
@@ -19,6 +20,7 @@ const MOTIVO_CUMPLE = 'Beneficio día de cumpleaños';
 
 const estadoStyle = {
   pendiente: 'bg-amber-100 text-amber-800',
+  aprobada_jefe: 'bg-blue-100 text-blue-800',
   aprobada: 'bg-green-100 text-green-800',
   rechazada: 'bg-red-100 text-red-800',
   cancelada: 'bg-slate-100 text-slate-600',
@@ -78,7 +80,7 @@ export default function Solicitudes() {
     ? anioObjetivo(perfil.fecha_nacimiento, hoy)
     : new Date().getFullYear();
   const yaTieneCumple = lista.some(
-    (s) => s.anio_beneficio === anioCumple && ['pendiente', 'aprobada'].includes(s.estado)
+    (s) => s.anio_beneficio === anioCumple && ['pendiente', 'aprobada_jefe', 'aprobada'].includes(s.estado)
   );
 
   async function cargar() {
@@ -220,11 +222,11 @@ export default function Solicitudes() {
   }
 
   async function verPdf(s) {
-    await verPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, perfil);
+    await verPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre, jefe_nombre: s.aprobado_por_jefe && s.aprobado_por_jefe === perfil?.jefe_directo_id ? perfil?.jefe_directo?.nombre_completo : undefined }, perfil);
   }
 
   async function descargarPdf(s) {
-    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, perfil);
+    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre, jefe_nombre: s.aprobado_por_jefe && s.aprobado_por_jefe === perfil?.jefe_directo_id ? perfil?.jefe_directo?.nombre_completo : undefined }, perfil);
   }
 
   if (!perfil) return null;
@@ -361,7 +363,7 @@ export default function Solicitudes() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-bold text-[#153A5B]">{s.tipos_permiso?.nombre}</p>
               <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoStyle[s.estado]}`}>
-                {s.estado}
+                {estadoVacacionesLabel(s.estado)}
               </span>
             </div>
             <p className="text-xs text-slate-600 italic leading-relaxed border-l-2 border-slate-200 pl-3">

@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Devuelve las solicitudes de permiso pendientes que le corresponde revisar
-// a quien llama: si es jefatura, las de su equipo directo; si es RR.HH./
-// administrador, todas. Mismo patrón que /api/vacaciones/calendario.
+// a quien llama. Doble aprobación (igual que /api/vacaciones/pendientes):
+// jefatura ve las 'pendiente' de su equipo directo; RR.HH./administrador
+// solo ve las que ya aprobó el jefe directo ('aprobada_jefe') más las
+// 'pendiente' de trabajadores sin jefe directo válido.
 export async function GET(req) {
   const auth = req.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -42,29 +44,83 @@ export async function GET(req) {
     );
   }
 
-  let queryTrabajadores = admin.from('trabajadores').select('id, nombre_completo');
-  if (!esRRHH) {
-    queryTrabajadores = queryTrabajadores.eq('jefe_directo_id', callerId);
-  }
-  const { data: trabajadores } = await queryTrabajadores;
-  const idsTrabajadores = (trabajadores || []).map((t) => t.id);
+  const incluirTipo = '*, tipos_permiso(nombre)';
 
-  if (idsTrabajadores.length === 0) {
+  if (!esRRHH) {
+    // Jefatura: solo su equipo directo, en 'pendiente' (una vez que aprueba,
+    // el permiso sale de su lista: ya no tiene nada más que hacer).
+    const { data: trabajadores } = await admin
+      .from('trabajadores')
+      .select('id, nombre_completo')
+      .eq('jefe_directo_id', callerId);
+    const idsTrabajadores = (trabajadores || []).map((t) => t.id);
+    if (idsTrabajadores.length === 0) {
+      return NextResponse.json({ solicitudes: [] });
+    }
+
+    const { data: solicitudes } = await admin
+      .from('solicitudes_permiso')
+      .select(incluirTipo)
+      .in('trabajador_id', idsTrabajadores)
+      .eq('estado', 'pendiente')
+      .order('created_at', { ascending: false });
+
+    const nombrePorTrabajador = new Map((trabajadores || []).map((t) => [t.id, t.nombre_completo]));
+    return NextResponse.json({
+      solicitudes: (solicitudes || []).map((s) => ({
+        ...s,
+        trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—',
+      })),
+    });
+  }
+
+  // RR.HH./administrador: solo lo que realmente le toca firmar:
+  //   - 'aprobada_jefe': el jefe directo ya lo aprobó (segunda firma).
+  //   - 'pendiente' de trabajadores SIN jefe directo válido (ahí RR.HH. es la
+  //     única aprobación).
+  // Los 'pendiente' que todavía dependen del jefe directo NO se muestran.
+  const { data: trabajadores } = await admin
+    .from('trabajadores')
+    .select('id, nombre_completo, jefe_directo_id');
+  if (!trabajadores || trabajadores.length === 0) {
     return NextResponse.json({ solicitudes: [] });
   }
+  const nombrePorTrabajador = new Map(trabajadores.map((t) => [t.id, t.nombre_completo]));
 
-  const { data: solicitudes } = await admin
-    .from('solicitudes_permiso')
-    .select('*, tipos_permiso(nombre)')
-    .in('trabajador_id', idsTrabajadores)
-    .eq('estado', 'pendiente')
-    .order('created_at', { ascending: false });
+  const idsJefes = [...new Set(trabajadores.map((t) => t.jefe_directo_id).filter(Boolean))];
+  let jefesValidos = new Set();
+  if (idsJefes.length > 0) {
+    const { data: rolesJefes } = await admin
+      .from('trabajador_roles')
+      .select('trabajador_id, rol')
+      .in('trabajador_id', idsJefes)
+      .in('rol', ['jefatura', 'rrhh', 'administrador']);
+    jefesValidos = new Set((rolesJefes || []).map((r) => r.trabajador_id));
+  }
+  const idsSinJefeValido = trabajadores
+    .filter((t) => !t.jefe_directo_id || !jefesValidos.has(t.jefe_directo_id))
+    .map((t) => t.id);
 
-  const nombrePorTrabajador = new Map((trabajadores || []).map((t) => [t.id, t.nombre_completo]));
-  const conNombre = (solicitudes || []).map((s) => ({
-    ...s,
-    trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—',
-  }));
+  const [{ data: pendientesSinJefe }, { data: enSegundaFirma }] = await Promise.all([
+    idsSinJefeValido.length > 0
+      ? admin
+          .from('solicitudes_permiso')
+          .select(incluirTipo)
+          .in('trabajador_id', idsSinJefeValido)
+          .eq('estado', 'pendiente')
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    admin
+      .from('solicitudes_permiso')
+      .select(incluirTipo)
+      .eq('estado', 'aprobada_jefe')
+      .order('fecha_aprobacion_jefe', { ascending: false }),
+  ]);
 
-  return NextResponse.json({ solicitudes: conNombre });
+  const conNombre = (lista) =>
+    (lista || []).map((s) => ({ ...s, trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—' }));
+
+  return NextResponse.json({
+    solicitudes: [...conNombre(enSegundaFirma), ...conNombre(pendientesSinJefe)],
+  });
 }

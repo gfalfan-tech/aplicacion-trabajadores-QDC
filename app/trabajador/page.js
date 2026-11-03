@@ -54,7 +54,7 @@ export default function TrabajadorHome() {
       .from('solicitudes_permiso')
       .select('id', { count: 'exact', head: true })
       .eq('trabajador_id', perfil.id)
-      .eq('estado', 'pendiente')
+      .in('estado', ['pendiente', 'aprobada_jefe'])
       .then(({ count }) => setPendientes(count || 0));
 
     supabase

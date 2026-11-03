@@ -32,6 +32,7 @@ import { formatDias, formatDiasDisponibles } from '@/lib/formatDias';
 
 const estadoStyleSolicitud = {
   pendiente: 'bg-amber-100 text-amber-800',
+  aprobada_jefe: 'bg-blue-100 text-blue-800',
   aprobada: 'bg-green-100 text-green-800',
   rechazada: 'bg-red-100 text-red-800',
   cancelada: 'bg-slate-100 text-slate-600',
@@ -187,12 +188,12 @@ export default function VerPerfilTrabajador() {
 
   async function verPdfPermiso(s) {
     if (!trabajador) return;
-    await abrirPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, trabajador);
+    await abrirPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre, jefe_nombre: s.aprobado_por_jefe && s.aprobado_por_jefe === trabajador?.jefe_directo_id ? trabajador?.jefe_directo?.nombre_completo : undefined }, trabajador);
   }
 
   async function descargarPermiso(s) {
     if (!trabajador) return;
-    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre }, trabajador);
+    await descargarPdfPermiso({ ...s, tipo_permiso: s.tipos_permiso?.nombre, jefe_nombre: s.aprobado_por_jefe && s.aprobado_por_jefe === trabajador?.jefe_directo_id ? trabajador?.jefe_directo?.nombre_completo : undefined }, trabajador);
   }
 
   async function verPdfVacaciones(s) {
@@ -661,7 +662,7 @@ export default function VerPerfilTrabajador() {
                     <span
                       className={`text-[10px] font-bold px-2 py-1 rounded-full ${estadoStyleSolicitud[s.estado]}`}
                     >
-                      {s.estado}
+                      {estadoVacacionesLabel(s.estado)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">

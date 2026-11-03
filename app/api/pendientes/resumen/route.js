@@ -37,19 +37,19 @@ export async function GET(req) {
     return count || 0;
   }
 
-  // Vacaciones tiene doble aprobación: para jefatura, "pendiente" (lo suyo,
-  // como antes, sin cambios). Para RR.HH. hay que contar solo lo que
-  // realmente le toca a RR.HH. resolver: 'pendiente' de trabajadores SIN
-  // jefe directo válido (ahí RR.HH. es la única aprobación) más TODAS las
-  // que están en 'aprobada_jefe' (segunda firma) — así el número no incluye
-  // solicitudes que todavía dependen del jefe directo de esa persona.
-  async function contarVacaciones() {
+  // Vacaciones y permisos tienen doble aprobación: para jefatura, "pendiente"
+  // (lo suyo, como antes). Para RR.HH. hay que contar solo lo que realmente
+  // le toca resolver: 'pendiente' de trabajadores SIN jefe directo válido
+  // (ahí RR.HH. es la única aprobación) más TODAS las que están en
+  // 'aprobada_jefe' (segunda firma) — así el número no incluye solicitudes
+  // que todavía dependen del jefe directo de esa persona.
+  async function contarConDobleFirma(tabla) {
     if (!esRRHH) {
-      return contar('solicitudes_vacaciones', 'estado', 'pendiente', 'trabajador_id');
+      return contar(tabla, 'estado', 'pendiente', 'trabajador_id');
     }
 
     const { count: segundaFirma } = await admin
-      .from('solicitudes_vacaciones')
+      .from(tabla)
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'aprobada_jefe');
 
@@ -71,7 +71,7 @@ export async function GET(req) {
     let pendientesSinJefe = 0;
     if (idsSinJefeValido.length > 0) {
       const { count } = await admin
-        .from('solicitudes_vacaciones')
+        .from(tabla)
         .select('id', { count: 'exact', head: true })
         .eq('estado', 'pendiente')
         .in('trabajador_id', idsSinJefeValido);
@@ -80,6 +80,8 @@ export async function GET(req) {
 
     return (segundaFirma || 0) + pendientesSinJefe;
   }
+  const contarVacaciones = () => contarConDobleFirma('solicitudes_vacaciones');
+  const contarPermisos = () => contarConDobleFirma('solicitudes_permiso');
 
   // Rendición de Gastos tiene la misma doble aprobación que vacaciones:
   // para jefatura, solo 'pendiente' de su equipo; para RR.HH., 'pendiente'
@@ -124,7 +126,7 @@ export async function GET(req) {
 
   const [vacaciones, permisos, certificados, cajaChica, rendicionGastos] = await Promise.all([
     contarVacaciones(),
-    contar('solicitudes_permiso', 'estado', 'pendiente', 'trabajador_id'),
+    contarPermisos(),
     esRRHH ? contar('certificados_antiguedad', 'estado', 'solicitado', 'trabajador_id') : Promise.resolve(0),
     contar('caja_chica_solicitudes', 'estado', 'pendiente', 'solicitante_id'),
     contarRendicionGastos(),
