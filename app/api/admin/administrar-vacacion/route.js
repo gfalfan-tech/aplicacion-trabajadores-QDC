@@ -97,6 +97,9 @@ export async function POST(req) {
       editado_por: auth.user.id,
       editado_en: ahora,
       motivo_edicion: motivo,
+      // La papeleta cambió: hay que volver a imprimirla y firmarla.
+      formalizada_at: null,
+      formalizada_por: null,
     };
     notifTitulo = 'Tu solicitud de vacaciones fue modificada';
     notifCuerpo = `RR.HH. corrigió tu solicitud de vacaciones: ahora es del ${fechaDesde} al ${fechaHasta} (${diasHabiles} días hábiles). Motivo: ${motivo}`;

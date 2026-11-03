@@ -14,6 +14,7 @@ import {
   resolverSolicitudVacaciones,
 } from '@/lib/vacacionesEquipo';
 import { obtenerPermisosPendientesEquipo, resolverSolicitudPermiso } from '@/lib/permisosEquipo';
+import { obtenerContadorPapeletas } from '@/lib/papeletas';
 
 export default function RRHHHome() {
   const { perfil } = useAuth();
@@ -23,6 +24,7 @@ export default function RRHHHome() {
   const [traslapes, setTraslapes] = useState(null);
   const [resolviendo, setResolviendo] = useState(false);
   const [errorCarga, setErrorCarga] = useState('');
+  const [papeletasPend, setPapeletasPend] = useState(0);
 
   async function cargar() {
     const { count: activos } = await supabase
@@ -61,6 +63,7 @@ export default function RRHHHome() {
 
   useEffect(() => {
     cargar();
+    obtenerContadorPapeletas().then(setPapeletasPend);
   }, []);
 
   async function resolver(item, estado) {
@@ -170,6 +173,19 @@ export default function RRHHHome() {
           <p className="text-2xl mb-2">🏖️</p>
           <p className="text-sm font-bold text-[#153A5B]">Vacaciones</p>
           <p className="text-xs text-slate-500 mt-0.5">Calendario del equipo</p>
+        </Link>
+        <Link
+          href="/rrhh/papeletas"
+          className="relative bg-white border border-slate-200 rounded-2xl p-4 hover:border-[#0F5C8C] transition-colors"
+        >
+          {papeletasPend > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] px-1.5 flex items-center justify-center">
+              {papeletasPend > 9 ? '9+' : papeletasPend}
+            </span>
+          )}
+          <p className="text-2xl mb-2">✍️</p>
+          <p className="text-sm font-bold text-[#153A5B]">Papeletas</p>
+          <p className="text-xs text-slate-500 mt-0.5">Por imprimir y firmar</p>
         </Link>
         <Link
           href="/rrhh/caja-chica"

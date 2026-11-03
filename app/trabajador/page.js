@@ -8,6 +8,7 @@ import AppShell from '@/components/AppShell';
 import { trabajadorLinks } from '@/lib/navLinks';
 import AlertaPendientes from '@/components/AlertaPendientes';
 import { formatDiasDisponibles } from '@/lib/formatDias';
+import { obtenerContadorPapeletas } from '@/lib/papeletas';
 
 const MESES_CORTOS = [
   'ene',
@@ -33,13 +34,19 @@ function formatearFechaCorta(fechaISO) {
 }
 
 export default function TrabajadorHome() {
-  const { perfil, roles, esJefatura, esRRHH, accesoCajaChica } = useAuth();
+  const { perfil, roles, esJefatura, esRRHH, accesoCajaChica, accesoPapeletas } = useAuth();
+  const [papeletasPend, setPapeletasPend] = useState(0);
   const tieneRendicionGastos = roles?.includes('rendicion_gastos');
   const [saldo, setSaldo] = useState(null);
   const [pendientes, setPendientes] = useState(0);
   const [cumples, setCumples] = useState([]);
   const [mural, setMural] = useState([]);
   const [muralNuevas, setMuralNuevas] = useState(0);
+
+  // Cuántas papeletas faltan por formalizar (solo para quien tiene ese rol).
+  useEffect(() => {
+    if (accesoPapeletas && !esRRHH) obtenerContadorPapeletas().then(setPapeletasPend);
+  }, [accesoPapeletas, esRRHH]);
 
   useEffect(() => {
     if (!perfil) return;
@@ -168,6 +175,21 @@ export default function TrabajadorHome() {
           >
             <p className="text-2xl mb-2">👥</p>
             <p className="text-sm font-bold text-[#153A5B]">Mi equipo — asistencia del mes</p>
+          </Link>
+        )}
+        {accesoPapeletas && !esRRHH && (
+          <Link
+            href="/trabajador/papeletas"
+            className="relative bg-white border border-slate-200 rounded-2xl p-4 col-span-2"
+          >
+            {papeletasPend > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] px-1.5 flex items-center justify-center">
+                {papeletasPend > 9 ? '9+' : papeletasPend}
+              </span>
+            )}
+            <p className="text-2xl mb-2">✍️</p>
+            <p className="text-sm font-bold text-[#153A5B]">Papeletas por formalizar</p>
+            <p className="text-xs text-slate-500 mt-0.5">Por imprimir y firmar</p>
           </Link>
         )}
         {accesoCajaChica && (

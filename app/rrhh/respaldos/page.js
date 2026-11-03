@@ -62,6 +62,16 @@ function FilaDocumento({ item }) {
           {item.nuevo && (
             <span className="text-[9px] font-bold text-red-700 bg-red-100 rounded-full px-2 py-0.5">NUEVO</span>
           )}
+          {(item._tipo === 'permisos' || item._tipo === 'vacaciones') &&
+            (item.formalizada_at ? (
+              <span className="text-[9px] font-bold text-green-800 bg-green-100 rounded-full px-2 py-0.5">
+                ✓ FORMALIZADA
+              </span>
+            ) : (
+              <span className="text-[9px] font-bold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
+                FALTA PAPELETA
+              </span>
+            ))}
         </p>
         <p className="text-xs text-slate-500 truncate">
           {item.trabajador_nombre} · {resumenDocumento(item)}

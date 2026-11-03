@@ -29,11 +29,12 @@ const vacio = {
   roles: ['trabajador'],
 };
 
-const ROLES_ASIGNABLES = ['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos', 'publicar_mural', 'caja_chica'];
+const ROLES_ASIGNABLES = ['trabajador', 'jefatura', 'rrhh', 'administrador', 'rendicion_gastos', 'publicar_mural', 'caja_chica', 'formalizar_papeletas'];
 const ETIQUETA_ROL = {
   rendicion_gastos: 'rendición de gastos',
   publicar_mural: 'publicar en el diario mural',
   caja_chica: 'caja chica',
+  formalizar_papeletas: 'formalizar papeletas',
 };
 
 export default function TrabajadoresRRHH() {
