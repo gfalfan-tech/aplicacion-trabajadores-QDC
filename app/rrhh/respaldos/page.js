@@ -10,8 +10,8 @@ import {
   etiquetaTipoRespaldo,
   agruparPorTrabajador,
   agruparPorMes,
-  agruparPermisosVacacionesPorMes,
   etiquetaMes,
+  claveMes,
   resumenDocumento,
 } from '@/lib/respaldosLogica';
 import { formatFechaCorta } from '@/lib/pdfComun';
@@ -53,7 +53,7 @@ function CarpetaCard({ icono, etiqueta, total, nuevos, onClick }) {
   );
 }
 
-function FilaDocumento({ item, mostrarTipo = false }) {
+function FilaDocumento({ item }) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="min-w-0">
@@ -64,7 +64,7 @@ function FilaDocumento({ item, mostrarTipo = false }) {
           )}
         </p>
         <p className="text-xs text-slate-500 truncate">
-          {item.trabajador_nombre} · {mostrarTipo ? `${etiquetaTipoRespaldo(item._tipo)} · ` : ''}{resumenDocumento(item)}
+          {item.trabajador_nombre} · {resumenDocumento(item)}
         </p>
       </div>
       <div className="flex gap-2 shrink-0">
@@ -93,9 +93,6 @@ export default function RespaldosAdmin() {
   const [tipo, setTipo] = useState(null);
   const [trabajadorId, setTrabajadorId] = useState(null);
   const [mes, setMes] = useState(null);
-  // Vista "por mes" (permisos + vacaciones juntos): mes › colaborador › PDFs.
-  const [mesGlobal, setMesGlobal] = useState(null);
-  const [trabajadorMesId, setTrabajadorMesId] = useState(null);
 
   useEffect(() => {
     obtenerResumenRespaldos()
@@ -105,17 +102,12 @@ export default function RespaldosAdmin() {
   }, []);
 
   function volverATipos() {
-    setMesGlobal(null);
-    setTrabajadorMesId(null);
     setTipo(null);
     setTrabajadorId(null);
     setMes(null);
   }
-  function volverATrabajadores() {
+  function volverAlPrimerNivel() {
     setTrabajadorId(null);
-    setMes(null);
-  }
-  function volverAMeses() {
     setMes(null);
   }
 
@@ -143,71 +135,59 @@ export default function RespaldosAdmin() {
     rendicionGastos: conTipo(datos.tipos.rendicionGastos, 'rendicionGastos'),
   };
   const todos = [...porTipo.permisos, ...porTipo.vacaciones, ...porTipo.cajaChica, ...porTipo.rendicionGastos];
-  const mesesPV = agruparPermisosVacacionesPorMes(porTipo.permisos, porTipo.vacaciones);
-  const carpetaMes = mesGlobal ? mesesPV.find((m) => m.clave === mesGlobal) : null;
   const nuevos = todos.filter((i) => i.nuevo).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+
+  // Permisos y Vacaciones: Tipo › Mes › Trabajador › PDFs.
+  // Rendición de Gastos: Tipo › Trabajador › Mes › PDFs (como antes).
+  // Caja Chica tiene su propia vista por folio.
+  const mesPrimero = tipo === 'permisos' || tipo === 'vacaciones';
+  const docsTipo = tipo && tipo !== 'cajaChica' ? porTipo[tipo] : [];
+  const docsMes = mes ? docsTipo.filter((i) => i.fecha && claveMes(i.fecha) === mes) : docsTipo;
+  const nombreTrabajador = (id) => docsTipo.find((i) => i.trabajador_id === id)?.trabajador_nombre || '—';
+
+  const migaMes = mes ? etiquetaMes(mes) : null;
+  const migaTrabajador = trabajadorId ? nombreTrabajador(trabajadorId) : null;
+  const [migaNivel1, migaNivel2] = mesPrimero ? [migaMes, migaTrabajador] : [migaTrabajador, migaMes];
 
   return (
     <AppShell links={rrhhLinks} titulo="Respaldos" requiereRRHH requiereAdministrador>
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 flex-wrap">
-        <button
-          onClick={volverATipos}
-          className={`hover:underline ${!tipo && !mesGlobal ? 'font-bold text-[#153A5B]' : ''}`}
-        >
+        <button onClick={volverATipos} className={`hover:underline ${!tipo ? 'font-bold text-[#153A5B]' : ''}`}>
           Respaldos
         </button>
-        {mesGlobal && (
-          <>
-            <span>›</span>
-            <button
-              onClick={() => setTrabajadorMesId(null)}
-              className={`hover:underline ${!trabajadorMesId ? 'font-bold text-[#153A5B]' : ''}`}
-            >
-              {etiquetaMes(mesGlobal)}
-            </button>
-          </>
-        )}
-        {mesGlobal && trabajadorMesId && (
-          <>
-            <span>›</span>
-            <span className="font-bold text-[#153A5B]">
-              {carpetaMes?.docs.find((i) => i.trabajador_id === trabajadorMesId)?.trabajador_nombre || '—'}
-            </span>
-          </>
-        )}
         {tipo && (
           <>
             <span>›</span>
             <button
-              onClick={volverATrabajadores}
-              className={`hover:underline ${!trabajadorId ? 'font-bold text-[#153A5B]' : ''}`}
+              onClick={volverAlPrimerNivel}
+              className={`hover:underline ${!migaNivel1 ? 'font-bold text-[#153A5B]' : ''}`}
             >
               {etiquetaTipoRespaldo(tipo)}
             </button>
           </>
         )}
-        {trabajadorId && (
+        {migaNivel1 && (
           <>
             <span>›</span>
-            <button onClick={volverAMeses} className={`hover:underline ${!mes ? 'font-bold text-[#153A5B]' : ''}`}>
-              {porTipo[tipo].find((i) => i.trabajador_id === trabajadorId)?.trabajador_nombre || '—'}
+            <button
+              onClick={() => (mesPrimero ? setTrabajadorId(null) : setMes(null))}
+              className={`hover:underline ${!migaNivel2 ? 'font-bold text-[#153A5B]' : ''}`}
+            >
+              {migaNivel1}
             </button>
           </>
         )}
-        {mes && (
+        {migaNivel2 && (
           <>
             <span>›</span>
-            <span className="font-bold text-[#153A5B]">
-              {agruparPorMes(porTipo[tipo].filter((i) => i.trabajador_id === trabajadorId)).find((m) => m.clave === mes)
-                ?.etiqueta}
-            </span>
+            <span className="font-bold text-[#153A5B]">{migaNivel2}</span>
           </>
         )}
       </div>
 
       {/* Nivel 0: tipos, con el bloque de "Nuevos" arriba */}
-      {!tipo && !mesGlobal && (
+      {!tipo && (
         <>
           {nuevos.length > 0 && (
             <div className="mb-6">
@@ -233,65 +213,36 @@ export default function RespaldosAdmin() {
               />
             ))}
           </div>
-
-          <p className="text-xs font-bold text-slate-400 tracking-wide mt-6 mb-2">
-            POR MES · PERMISOS Y VACACIONES
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {mesesPV.length === 0 && (
-              <p className="text-sm text-slate-400 col-span-full">Sin permisos ni vacaciones aprobados todavía.</p>
-            )}
-            {mesesPV.map((m) => (
-              <CarpetaCard
-                key={m.clave}
-                icono="🗓️"
-                etiqueta={m.etiqueta}
-                total={m.docs.length}
-                nuevos={m.nuevos}
-                onClick={() => setMesGlobal(m.clave)}
-              />
-            ))}
-          </div>
         </>
-      )}
-
-      {/* Vista por mes · nivel 1: colaboradores con permiso o vacaciones ese mes */}
-      {mesGlobal && carpetaMes && !trabajadorMesId && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {agruparPorTrabajador(carpetaMes.docs).map((c) => (
-            <CarpetaCard
-              key={c.trabajador_id}
-              icono="👤"
-              etiqueta={c.trabajador_nombre}
-              total={c.docs.length}
-              nuevos={c.nuevos}
-              onClick={() => setTrabajadorMesId(c.trabajador_id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Vista por mes · nivel 2: los PDFs del colaborador en ese mes */}
-      {mesGlobal && carpetaMes && trabajadorMesId && (
-        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-          {carpetaMes.docs
-            .filter((i) => i.trabajador_id === trabajadorMesId)
-            .map((item) => (
-              <FilaDocumento key={`${item._tipo}-${item.id}`} item={item} mostrarTipo />
-            ))}
-        </div>
       )}
 
       {/* Caja Chica: carpetas por folio + buscador */}
       {tipo === 'cajaChica' && <RespaldosCajaChica folios={datos.cajaChicaFolios || []} />}
 
-      {/* Nivel 1: trabajadores dentro de un tipo */}
-      {tipo && tipo !== 'cajaChica' && !trabajadorId && (
+      {tipo && tipo !== 'cajaChica' && docsTipo.length === 0 && (
+        <p className="text-sm text-slate-400">Sin documentos en esta carpeta todavía.</p>
+      )}
+
+      {/* Permisos / Vacaciones · nivel 1: meses */}
+      {mesPrimero && !mes && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {agruparPorTrabajador(porTipo[tipo]).length === 0 && (
-            <p className="text-sm text-slate-400 col-span-full">Sin documentos en esta carpeta todavía.</p>
-          )}
-          {agruparPorTrabajador(porTipo[tipo]).map((carpeta) => (
+          {agruparPorMes(docsTipo).map((carpeta) => (
+            <CarpetaCard
+              key={carpeta.clave}
+              icono="📁"
+              etiqueta={carpeta.etiqueta}
+              total={carpeta.docs.length}
+              nuevos={carpeta.nuevos}
+              onClick={() => setMes(carpeta.clave)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Rendición de Gastos · nivel 1: trabajadores */}
+      {tipo && tipo !== 'cajaChica' && !mesPrimero && !trabajadorId && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {agruparPorTrabajador(docsTipo).map((carpeta) => (
             <CarpetaCard
               key={carpeta.trabajador_id}
               icono="👤"
@@ -304,13 +255,29 @@ export default function RespaldosAdmin() {
         </div>
       )}
 
-      {/* Nivel 2: meses dentro de un trabajador */}
-      {tipo && tipo !== 'cajaChica' && trabajadorId && !mes && (
+      {/* Permisos / Vacaciones · nivel 2: trabajadores dentro del mes */}
+      {mesPrimero && mes && !trabajadorId && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {agruparPorMes(porTipo[tipo].filter((i) => i.trabajador_id === trabajadorId)).map((carpeta) => (
+          {agruparPorTrabajador(docsMes).map((carpeta) => (
+            <CarpetaCard
+              key={carpeta.trabajador_id}
+              icono="👤"
+              etiqueta={carpeta.trabajador_nombre}
+              total={carpeta.docs.length}
+              nuevos={carpeta.nuevos}
+              onClick={() => setTrabajadorId(carpeta.trabajador_id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Rendición de Gastos · nivel 2: meses dentro de un trabajador */}
+      {tipo && tipo !== 'cajaChica' && !mesPrimero && trabajadorId && !mes && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {agruparPorMes(docsTipo.filter((i) => i.trabajador_id === trabajadorId)).map((carpeta) => (
             <CarpetaCard
               key={carpeta.clave}
-              icono="📅"
+              icono="📁"
               etiqueta={carpeta.etiqueta}
               total={carpeta.docs.length}
               nuevos={carpeta.nuevos}
@@ -320,11 +287,11 @@ export default function RespaldosAdmin() {
         </div>
       )}
 
-      {/* Nivel 3: documentos del mes */}
+      {/* Último nivel: los PDFs del trabajador en ese mes */}
       {tipo && tipo !== 'cajaChica' && trabajadorId && mes && (
         <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
-          {porTipo[tipo]
-            .filter((i) => i.trabajador_id === trabajadorId && i.fecha && i.fecha.slice(0, 7) === mes)
+          {docsMes
+            .filter((i) => i.trabajador_id === trabajadorId)
             .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
             .map((item) => (
               <FilaDocumento key={item.id} item={item} />
