@@ -92,6 +92,7 @@ export async function GET(req) {
     return NextResponse.json({ solicitudes: [] });
   }
   const nombrePorTrabajador = new Map(trabajadores.map((t) => [t.id, t.nombre_completo]));
+  const jefePorTrabajador = new Map(trabajadores.map((t) => [t.id, t.jefe_directo_id]));
 
   // Quiénes son jefes directos de alguien, y si ese jefe tiene un rol que
   // lo habilita para aprobar (jefatura/rrhh/administrador) — mismo criterio
@@ -136,7 +137,14 @@ export async function GET(req) {
   ]);
 
   const conNombre = (lista) =>
-    (lista || []).map((s) => ({ ...s, trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—' }));
+    (lista || []).map((s) => ({
+      ...s,
+      trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—',
+      // 'jefe': le toca a quien llama como jefe directo (primera firma);
+      // 'rrhh': está en la etapa de RR.HH. (segunda firma o sin jefe válido).
+      etapa:
+        s.estado === 'pendiente' && jefePorTrabajador.get(s.trabajador_id) === callerId ? 'jefe' : 'rrhh',
+    }));
 
   return NextResponse.json({
     solicitudes: [...conNombre(enSegundaFirma), ...conNombre(pendientesSinJefe)],

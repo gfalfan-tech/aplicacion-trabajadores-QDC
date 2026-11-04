@@ -228,8 +228,14 @@ export default function RRHHHome() {
                   <> · {item.hora_desde.slice(0, 5)} a {item.hora_hasta.slice(0, 5)} hrs</>
                 )}
               </p>
-              {item.estado === 'aprobada_jefe' && (
-                <p className="text-[10px] text-blue-700 mt-0.5">Ya la aprobó su jefe directo — falta tu firma.</p>
+              {item.etapa === 'jefe' ? (
+                <span className="inline-block text-[10px] font-bold text-green-800 bg-green-100 rounded-full px-2 py-0.5 mt-1">
+                  Tu aprobación (jefe directo)
+                </span>
+              ) : (
+                <span className="inline-block text-[10px] font-bold text-slate-600 bg-slate-100 rounded-full px-2 py-0.5 mt-1">
+                  {item.estado === 'aprobada_jefe' ? 'Firma de RR.HH. · ya aprobó su jefe' : 'Firma de RR.HH.'}
+                </span>
               )}
             </div>
             <div className="flex gap-2 shrink-0">
