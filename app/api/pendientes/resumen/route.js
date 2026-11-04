@@ -65,7 +65,12 @@ export async function GET(req) {
       jefesValidos = new Set((rolesJefes || []).map((r) => r.trabajador_id));
     }
     const idsSinJefeValido = (trabajadores || [])
-      .filter((t) => !t.jefe_directo_id || !jefesValidos.has(t.jefe_directo_id))
+      .filter(
+        (t) =>
+          !t.jefe_directo_id ||
+          !jefesValidos.has(t.jefe_directo_id) ||
+          t.jefe_directo_id === user.id
+      )
       .map((t) => t.id);
 
     let pendientesSinJefe = 0;
@@ -108,7 +113,12 @@ export async function GET(req) {
       jefesValidos = new Set((rolesJefes || []).map((r) => r.trabajador_id));
     }
     const idsSinJefeValido = (trabajadores || [])
-      .filter((t) => !t.jefe_directo_id || !jefesValidos.has(t.jefe_directo_id))
+      .filter(
+        (t) =>
+          !t.jefe_directo_id ||
+          !jefesValidos.has(t.jefe_directo_id) ||
+          t.jefe_directo_id === user.id
+      )
       .map((t) => t.id);
 
     let pendientesSinJefe = 0;

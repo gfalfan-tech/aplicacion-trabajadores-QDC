@@ -89,7 +89,13 @@ export async function GET(req) {
     jefesValidos = new Set((rolesJefes || []).map((r) => r.trabajador_id));
   }
   const idsSinJefeValido = trabajadores
-    .filter((t) => !t.jefe_directo_id || !jefesValidos.has(t.jefe_directo_id))
+    .filter(
+      (t) =>
+        !t.jefe_directo_id ||
+        !jefesValidos.has(t.jefe_directo_id) ||
+        // RR.HH. que además es jefe directo de esa persona: la primera etapa le toca a él.
+        t.jefe_directo_id === callerId
+    )
     .map((t) => t.id);
   const idsTodos = trabajadores.map((t) => t.id);
 
