@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
+import { enviarCorreo } from '@/lib/enviarCorreo';
+import { correoPapeletaLista } from '@/lib/plantillasCorreo';
 
 const TABLAS = { permiso: 'solicitudes_permiso', vacaciones: 'solicitudes_vacaciones' };
 
@@ -46,6 +48,21 @@ export async function POST(req) {
     relacionado_id: id,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Correo al trabajador (si falla, el aviso en la app y el push ya salieron).
+  try {
+    const { data: trabajador } = await auth.admin
+      .from('trabajadores')
+      .select('email')
+      .eq('id', solicitud.trabajador_id)
+      .maybeSingle();
+    if (trabajador?.email) {
+      const { subject, html } = correoPapeletaLista({ cosa, rango });
+      await enviarCorreo({ to: trabajador.email, subject, html });
+    }
+  } catch (e) {
+    console.error('[papeletas/notificar] Error enviando correo:', e);
+  }
 
   return NextResponse.json({ ok: true });
 }
