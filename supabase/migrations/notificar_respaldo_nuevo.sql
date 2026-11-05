@@ -25,8 +25,12 @@ declare
   v_nombre text;
   v_tipo text;
   v_detalle text;
+  v_estado text;
 begin
-  if new.estado is not distinct from old.estado then
+  -- El estado se compara siempre como texto: en permisos y vacaciones es un
+  -- enum (estado_solicitud) que no tiene todos los valores de las otras tablas.
+  v_estado := new.estado::text;
+  if v_estado is not distinct from old.estado::text then
     return new;
   end if;
 
@@ -38,7 +42,8 @@ begin
     return new;
   end if;
 
-  if tg_table_name = 'solicitudes_permiso' and new.estado = 'aprobada' then
+  if tg_table_name = 'solicitudes_permiso' then
+    if v_estado <> 'aprobada' then return new; end if;
     v_tipo := 'respaldo_permiso';
     v_trabajador := new.trabajador_id;
     v_detalle := 'permiso ' ||
@@ -46,7 +51,8 @@ begin
         then 'del ' || to_char(new.fecha_desde, 'DD-MM-YYYY')
         else 'del ' || to_char(new.fecha_desde, 'DD-MM-YYYY') || ' al ' || to_char(new.fecha_hasta, 'DD-MM-YYYY')
       end;
-  elsif tg_table_name = 'solicitudes_vacaciones' and new.estado = 'aprobada' then
+  elsif tg_table_name = 'solicitudes_vacaciones' then
+    if v_estado <> 'aprobada' then return new; end if;
     v_tipo := 'respaldo_vacaciones';
     v_trabajador := new.trabajador_id;
     v_detalle := 'vacaciones ' ||
@@ -54,11 +60,13 @@ begin
         then 'del ' || to_char(new.fecha_desde, 'DD-MM-YYYY')
         else 'del ' || to_char(new.fecha_desde, 'DD-MM-YYYY') || ' al ' || to_char(new.fecha_hasta, 'DD-MM-YYYY')
       end;
-  elsif tg_table_name = 'rendiciones_gastos' and new.estado = 'aprobada' then
+  elsif tg_table_name = 'rendiciones_gastos' then
+    if v_estado <> 'aprobada' then return new; end if;
     v_tipo := 'respaldo_rendicion';
     v_trabajador := new.trabajador_id;
     v_detalle := 'rendición de gastos';
-  elsif tg_table_name = 'caja_chica_solicitudes' and new.estado = 'rendida' then
+  elsif tg_table_name = 'caja_chica_solicitudes' then
+    if v_estado <> 'rendida' then return new; end if;
     v_tipo := 'respaldo_caja_chica';
     v_trabajador := new.solicitante_id;
     v_detalle := 'caja chica rendida';
@@ -77,6 +85,10 @@ begin
     new.id
   );
 
+  return new;
+exception when others then
+  -- Un aviso nunca debe impedir que se apruebe o cierre un documento.
+  raise warning 'fn_notificar_respaldo_nuevo: %', sqlerrm;
   return new;
 end;
 $$;
