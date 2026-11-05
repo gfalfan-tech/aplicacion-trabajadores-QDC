@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -603,7 +604,7 @@ export default function VerPerfilTrabajador() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    {s.fecha_desde} → {s.fecha_hasta}
+                    {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
                   </p>
                   <div className="mt-2 flex gap-2">
                     <button
@@ -666,7 +667,7 @@ export default function VerPerfilTrabajador() {
                     </span>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {s.fecha_desde} → {s.fecha_hasta}
+                    {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
                     {s.motivo ? ` · ${s.motivo}` : ''}
                   </p>
                   <div className="mt-2 flex gap-2">
@@ -765,7 +766,7 @@ export default function VerPerfilTrabajador() {
           >
             <p className="text-sm font-bold text-[#153A5B] mb-1">Cancelar permiso aprobado</p>
             <p className="text-xs text-slate-500 mb-4">
-              {permisoActivo.tipos_permiso?.nombre} · {permisoActivo.fecha_desde} → {permisoActivo.fecha_hasta}
+              {permisoActivo.tipos_permiso?.nombre} · {fechaDMA(permisoActivo.fecha_desde)} → {fechaDMA(permisoActivo.fecha_hasta)}
             </p>
 
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
@@ -819,7 +820,7 @@ export default function VerPerfilTrabajador() {
               {modoVacacion === 'editar' ? 'Editar fechas de vacaciones' : 'Cancelar vacaciones'}
             </p>
             <p className="text-xs text-slate-500 mb-4">
-              Actualmente: {vacacionActiva.fecha_desde} → {vacacionActiva.fecha_hasta} (
+              Actualmente: {fechaDMA(vacacionActiva.fecha_desde)} → {fechaDMA(vacacionActiva.fecha_hasta)} (
               {vacacionActiva.dias_habiles} días hábiles)
             </p>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
@@ -223,7 +224,7 @@ export default function RRHHHome() {
                   : `Vacaciones (${item.dias_habiles} días)`}
               </p>
               <p className="text-xs text-slate-500">
-                {item.fecha_desde} → {item.fecha_hasta}
+                {fechaDMA(item.fecha_desde)} → {fechaDMA(item.fecha_hasta)}
                 {item.origen === 'permiso' && item.hora_desde && item.hora_hasta && (
                   <> · {item.hora_desde.slice(0, 5)} a {item.hora_hasta.slice(0, 5)} hrs</>
                 )}

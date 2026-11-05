@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
@@ -396,7 +397,7 @@ function TarjetaVacacionPendiente({ s, onAprobar, onRechazar }) {
         </span>
       </div>
       <p className="text-xs text-slate-500 mb-2">
-        {s.fecha_desde} → {s.fecha_hasta}
+        {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
       </p>
       {s.estado === 'aprobada_jefe' && (
         <p className="text-[10px] text-blue-700 mb-2">Ya la aprobó su jefe directo — falta tu firma.</p>

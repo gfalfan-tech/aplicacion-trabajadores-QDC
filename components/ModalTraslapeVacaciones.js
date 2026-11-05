@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { estadoVacacionesLabel } from '@/lib/estadoVacaciones';
 
 // Modal de advertencia: se muestra antes de aprobar una solicitud de
@@ -21,7 +22,7 @@ export default function ModalTraslapeVacaciones({ traslapes, onConfirmar, onCanc
               <div>
                 <p className="font-bold text-[#153A5B]">{t.nombre_completo}</p>
                 <p className="text-slate-500">
-                  {t.fecha_desde} → {t.fecha_hasta}
+                  {fechaDMA(t.fecha_desde)} → {fechaDMA(t.fecha_hasta)}
                 </p>
               </div>
               <span

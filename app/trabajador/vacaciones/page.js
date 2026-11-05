@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/useAuth';
@@ -201,7 +202,7 @@ export default function Vacaciones() {
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              {s.fecha_desde} → {s.fecha_hasta}
+              {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
             </p>
             <div className="mt-2 space-y-0.5">
               {fechasResolucionVacaciones(s, perfil.jefe_directo_id).map((f) => (

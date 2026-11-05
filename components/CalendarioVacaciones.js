@@ -1,5 +1,6 @@
 'use client';
 
+import { fechaDMA } from '@/lib/formatoFecha';
 import { useState } from 'react';
 import Avatar from '@/components/Avatar';
 import { armarGrillaMes, nombreMes, sumarMes } from '@/lib/vacacionesEquipo';
@@ -115,7 +116,7 @@ export default function CalendarioVacaciones({ mes, solicitudes, trabajadoresPor
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-[#153A5B] truncate">{t?.nombre_completo}</p>
                       <p className="text-[10px] text-slate-500">
-                        {s.fecha_desde} → {s.fecha_hasta}
+                        {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
                       </p>
                     </div>
                     <span
