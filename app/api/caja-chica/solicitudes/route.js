@@ -122,6 +122,16 @@ export async function POST(req) {
     destinatarios = (respaldoData || []).map((r) => r.trabajador_id);
   }
 
+  // Aprobadores adicionales asignados a este solicitante (solo Caja Chica):
+  // también reciben el aviso, junto al jefe directo.
+  const { data: adicionalesData } = await admin
+    .from('caja_chica_aprobadores_adicionales')
+    .select('aprobador_id')
+    .eq('solicitante_id', user.id);
+  for (const a of adicionalesData || []) {
+    if (!destinatarios.includes(a.aprobador_id)) destinatarios.push(a.aprobador_id);
+  }
+
   // RR.HH./administrador siempre se entera, exista o no un aprobador
   // directo — así puede hacer seguimiento y aprobar si hace falta.
   const idsRRHH = Array.from(rolesPorTrabajador.entries())

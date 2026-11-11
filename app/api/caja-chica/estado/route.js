@@ -15,7 +15,20 @@ export async function GET(req) {
   }
   const { admin, user, esRRHH, esJefatura, tieneCajaChica } = auth;
 
-  if (!esRRHH && !esJefatura && !tieneCajaChica) {
+  // Aprobadores adicionales por trabajador (solo Caja Chica): quién puede aprobar
+  // además del jefe directo, agrupado por solicitante.
+  const { data: adicionalesData } = await admin
+    .from('caja_chica_aprobadores_adicionales')
+    .select('solicitante_id, aprobador_id');
+  const adicionalesPorSolicitante = new Map();
+  (adicionalesData || []).forEach((a) => {
+    const lista = adicionalesPorSolicitante.get(a.solicitante_id) || [];
+    lista.push(a.aprobador_id);
+    adicionalesPorSolicitante.set(a.solicitante_id, lista);
+  });
+  const esAprobadorAdicional = (adicionalesData || []).some((a) => a.aprobador_id === user.id);
+
+  if (!esRRHH && !esJefatura && !tieneCajaChica && !esAprobadorAdicional) {
     return NextResponse.json({ error: 'No tienes acceso a Caja Chica.' }, { status: 403 });
   }
 
@@ -37,7 +50,13 @@ export async function GET(req) {
       .select('*')
       .eq('periodo_id', periodo.id)
       .order('created_at', { ascending: false });
-    solicitudes = (data || []).filter((s) => !soloPropio || s.solicitante_id === user.id);
+    // Quien entra "solo propio" ve además las solicitudes que le toca aprobar como adicional.
+    solicitudes = (data || []).filter(
+      (s) =>
+        !soloPropio ||
+        s.solicitante_id === user.id ||
+        (adicionalesPorSolicitante.get(s.solicitante_id) || []).includes(user.id)
+    );
   }
 
   const { data: trabajadores } = await admin
@@ -93,6 +112,7 @@ export async function GET(req) {
           callerEsRRHH: esRRHH,
           aprobadorEsperadoId,
           aprobadoresRespaldoIds,
+          aprobadoresAdicionalesIds: adicionalesPorSolicitante.get(s.solicitante_id) || [],
         }),
       es_solicitante: s.solicitante_id === user.id,
     };
@@ -108,6 +128,16 @@ export async function GET(req) {
     }));
   }
 
+  let aprobadoresAdicionales = [];
+  if (esRRHH) {
+    aprobadoresAdicionales = (adicionalesData || []).map((a) => ({
+      solicitante_id: a.solicitante_id,
+      solicitante_nombre: nombrePorId.get(a.solicitante_id) || '—',
+      aprobador_id: a.aprobador_id,
+      aprobador_nombre: nombrePorId.get(a.aprobador_id) || '—',
+    }));
+  }
+
   return NextResponse.json({
     // Para soloPropio no se expone el fondo inicial ni datos de quién abrió la caja.
     periodo:
@@ -120,5 +150,6 @@ export async function GET(req) {
     esRRHH,
     esJefatura,
     aprobadoresRespaldo,
+    aprobadoresAdicionales,
   });
 }

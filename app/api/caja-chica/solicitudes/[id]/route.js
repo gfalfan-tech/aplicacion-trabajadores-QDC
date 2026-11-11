@@ -53,12 +53,18 @@ export async function PATCH(req, { params }) {
       .from('caja_chica_aprobadores_respaldo')
       .select('trabajador_id');
     const aprobadoresRespaldoIds = (respaldoData || []).map((r) => r.trabajador_id);
+    const { data: adicionalesData } = await admin
+      .from('caja_chica_aprobadores_adicionales')
+      .select('aprobador_id')
+      .eq('solicitante_id', solicitud.solicitante_id);
+    const aprobadoresAdicionalesIds = (adicionalesData || []).map((a) => a.aprobador_id);
 
     const autorizado = puedeAprobar({
       callerId: user.id,
       callerEsRRHH: esRRHH,
       aprobadorEsperadoId,
       aprobadoresRespaldoIds,
+      aprobadoresAdicionalesIds,
     });
     if (!autorizado) {
       return NextResponse.json({ error: 'No te corresponde aprobar esta solicitud.' }, { status: 403 });

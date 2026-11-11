@@ -10,6 +10,8 @@ import {
   obtenerTrabajadoresYAprobadoresRespaldo,
   agregarAprobadorRespaldo,
   quitarAprobadorRespaldo,
+  agregarAprobadorAdicional,
+  quitarAprobadorAdicional,
   recargarCajaChica,
 } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
@@ -63,6 +65,8 @@ export default function CajaChicaVista() {
   const [reporte, setReporte] = useState(null);
   const [aprobadores, setAprobadores] = useState(null);
   const [seleccionAprobador, setSeleccionAprobador] = useState('');
+  const [adicionalSolicitante, setAdicionalSolicitante] = useState('');
+  const [adicionalAprobador, setAdicionalAprobador] = useState('');
 
   async function cargar() {
     setError('');
@@ -515,6 +519,91 @@ export default function CajaChicaVista() {
               >
                 📋 Rendir caja chica
               </button>
+
+              <details className="mb-4">
+                <summary className="text-xs font-bold text-slate-400 tracking-wide cursor-pointer mb-2">
+                  APROBADOR ADICIONAL POR TRABAJADOR
+                </summary>
+                <div className="bg-white rounded-xl border border-slate-200 p-4 mt-2">
+                  <p className="text-xs text-slate-500 mb-3">
+                    Para las solicitudes de caja chica de un trabajador, la persona elegida puede aprobar
+                    además de su jefe directo. Solo vale para Caja Chica; el resto de la app no cambia.
+                  </p>
+                  {(estado.aprobadoresAdicionales || []).map((a) => (
+                    <div
+                      key={`${a.solicitante_id}-${a.aprobador_id}`}
+                      className="flex items-center justify-between py-1.5"
+                    >
+                      <p className="text-sm text-[#153A5B]">
+                        {a.solicitante_nombre} <span className="text-slate-400">→</span> {a.aprobador_nombre}
+                      </p>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await quitarAprobadorAdicional(a.solicitante_id, a.aprobador_id);
+                            cargar();
+                          } catch (err) {
+                            setError(err.message);
+                          }
+                        }}
+                        className="text-xs text-red-600"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))}
+                  {aprobadores === null ? (
+                    <button onClick={abrirAprobadores} className="text-xs font-bold text-[#0F5C8C] mt-2">
+                      + Asignar aprobador adicional
+                    </button>
+                  ) : (
+                    <div className="flex flex-col gap-2 mt-2">
+                      <select
+                        value={adicionalSolicitante}
+                        onChange={(e) => setAdicionalSolicitante(e.target.value)}
+                        className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Trabajador que solicita…</option>
+                        {aprobadores.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.nombre_completo}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={adicionalAprobador}
+                        onChange={(e) => setAdicionalAprobador(e.target.value)}
+                        className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Quién puede aprobar además…</option>
+                        {aprobadores
+                          .filter((t) => t.id !== adicionalSolicitante)
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.nombre_completo}
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        onClick={async () => {
+                          if (!adicionalSolicitante || !adicionalAprobador) return;
+                          try {
+                            await agregarAprobadorAdicional(adicionalSolicitante, adicionalAprobador);
+                            setAdicionalSolicitante('');
+                            setAdicionalAprobador('');
+                            cargar();
+                          } catch (err) {
+                            setError(err.message);
+                          }
+                        }}
+                        className="text-xs font-bold text-white bg-[#0F5C8C] rounded-lg px-3 py-1.5"
+                      >
+                        Asignar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </details>
 
               <details>
                 <summary className="text-xs font-bold text-slate-400 tracking-wide cursor-pointer mb-2">
