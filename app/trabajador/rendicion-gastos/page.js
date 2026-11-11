@@ -11,7 +11,7 @@ import {
   listarMisRendiciones,
   obtenerRendicionesPendientes,
 } from '@/lib/rendicionGastos';
-import { estadoRendicionLabel, estadoRendicionStyle, formatearMonto, totalLineas } from '@/lib/rendicionGastosLogica';
+import { estadoRendicionLabel, estadoRendicionStyle, formatearMonto, formatearFolio, totalLineas } from '@/lib/rendicionGastosLogica';
 
 export default function RendicionGastosLista() {
   const router = useRouter();
@@ -78,6 +78,12 @@ export default function RendicionGastosLista() {
               >
                 <div>
                   <p className="text-sm font-bold text-[#153A5B]">{r.trabajador_nombre}</p>
+                  {r.titulo && (
+                    <p className="text-xs font-semibold text-slate-600 uppercase">
+                      {r.folio ? `N° ${formatearFolio(r.folio)} · ` : ''}
+                      {r.titulo}
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500">
                     {formatearMonto(r.total_entregado_qdc, r.moneda)} entregados · {r.moneda}
                   </p>
@@ -117,8 +123,14 @@ export default function RendicionGastosLista() {
               >
                 <div>
                   <p className="text-sm font-bold text-[#153A5B]">
-                    {formatearMonto(r.total_entregado_qdc, r.moneda)} entregados
+                    {r.folio ? `N° ${formatearFolio(r.folio)} · ` : ''}
+                    {r.titulo ? r.titulo.toUpperCase() : `${formatearMonto(r.total_entregado_qdc, r.moneda)} entregados`}
                   </p>
+                  {r.titulo && (
+                    <p className="text-xs text-slate-500">
+                      {formatearMonto(r.total_entregado_qdc, r.moneda)} entregados
+                    </p>
+                  )}
                   <p className="text-xs text-slate-500">
                     {r.moneda} · {new Date(r.created_at).toLocaleDateString('es-CL')}
                   </p>

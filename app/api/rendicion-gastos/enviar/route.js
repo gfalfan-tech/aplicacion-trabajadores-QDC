@@ -42,7 +42,7 @@ export async function POST(req) {
 
   const { data: rendicion } = await admin
     .from('rendiciones_gastos')
-    .select('id, trabajador_id, estado, moneda')
+    .select('id, trabajador_id, estado, moneda, titulo')
     .eq('id', rendicionId)
     .maybeSingle();
   if (!rendicion) {
@@ -53,6 +53,13 @@ export async function POST(req) {
   }
   if (rendicion.estado !== 'borrador') {
     return NextResponse.json({ error: 'Esta rendición ya fue enviada.' }, { status: 409 });
+  }
+
+  if (!rendicion.titulo || !rendicion.titulo.trim()) {
+    return NextResponse.json(
+      { error: 'Escribe un título para la rendición antes de enviarla.' },
+      { status: 422 }
+    );
   }
 
   const { data: rolesData } = await admin
@@ -78,10 +85,12 @@ export async function POST(req) {
     );
   }
 
-  const { error } = await admin
+  const { data: enviada, error } = await admin
     .from('rendiciones_gastos')
     .update({ estado: 'pendiente', fecha_envio: new Date().toISOString() })
-    .eq('id', rendicionId);
+    .eq('id', rendicionId)
+    .select('folio')
+    .single();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -121,7 +130,7 @@ export async function POST(req) {
       idsAvisar.map((id) => ({
         trabajador_id: id,
         titulo: 'Rendición de gastos',
-        cuerpo: `${trabajador?.nombre_completo || 'Un trabajador'} envió una rendición de gastos para tu revisión.`,
+        cuerpo: `${trabajador?.nombre_completo || 'Un trabajador'} envió la rendición ${enviada?.folio ? `N° ${String(enviada.folio).padStart(3, '0')} ` : ''}"${rendicion.titulo.trim()}" para tu revisión.`,
         relacionado_tipo: 'rendicion_gastos',
         relacionado_id: rendicionId,
       }))
@@ -153,6 +162,8 @@ export async function POST(req) {
           nombreTrabajador: trabajador?.nombre_completo || 'Un trabajador',
           totalGastos,
           moneda: rendicion.moneda || 'CLP',
+          titulo: rendicion.titulo.trim(),
+          folio: enviada?.folio ? String(enviada.folio).padStart(3, '0') : null,
           etapa: etapaCorreo,
           token: tokenRevision,
         });

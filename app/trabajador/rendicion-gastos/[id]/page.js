@@ -8,6 +8,7 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import {
   obtenerRendicion,
   guardarCabecera,
+  guardarTitulo,
   agregarLinea,
   eliminarLinea,
   subirRespaldo,
@@ -27,6 +28,7 @@ import {
   formatearMonto,
   totalLineas,
   fechasResolucionRendicion,
+  formatearFolio,
   mensajeDiferencia,
 } from '@/lib/rendicionGastosLogica';
 import { verPdfRendicionGastos, descargarPdfRendicionGastos } from '@/lib/rendicionGastosPdf';
@@ -42,6 +44,7 @@ export default function RendicionGastosDetalle() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
 
+  const [titulo, setTitulo] = useState('');
   const [moneda, setMoneda] = useState('CLP');
   const [tipoCambio, setTipoCambio] = useState('');
   const [totalEntregado, setTotalEntregado] = useState('0');
@@ -66,6 +69,7 @@ export default function RendicionGastosDetalle() {
         return;
       }
       setRendicion(r);
+      setTitulo(r.titulo || '');
       setMoneda(r.moneda);
       setTipoCambio(r.tipo_cambio ? String(r.tipo_cambio) : '');
       setTotalEntregado(String(r.total_entregado_qdc ?? 0));
@@ -95,6 +99,7 @@ export default function RendicionGastosDetalle() {
     setError('');
     try {
       await guardarCabecera(id, {
+        titulo,
         moneda,
         tipo_cambio: tipoCambio ? Number(tipoCambio) : null,
         total_entregado_qdc: Number(totalEntregado) || 0,
@@ -172,10 +177,15 @@ export default function RendicionGastosDetalle() {
       setError('Agrega al menos una línea de gasto antes de enviar.');
       return;
     }
+    if (!titulo.trim()) {
+      setError('Escribe un título para la rendición (ej. "Gastos visita Winoa") antes de enviarla.');
+      return;
+    }
     if (!confirm('¿Enviar esta rendición para su revisión? Ya no podrás editarla después.')) return;
     setEnviando(true);
     setError('');
     try {
+      await guardarTitulo(id, titulo);
       await enviarRendicion(id);
       await cargar();
     } catch (err) {
@@ -225,6 +235,12 @@ export default function RendicionGastosDetalle() {
         <>
           <div className="flex items-center justify-between mb-4 gap-2">
             <div>
+              {rendicion.folio && (
+                <p className="text-[10px] font-bold text-slate-400">FOLIO N° {formatearFolio(rendicion.folio)}</p>
+              )}
+              {rendicion.titulo && (
+                <p className="text-sm font-bold text-[#153A5B] uppercase">{rendicion.titulo}</p>
+              )}
               {!esDueño && (
                 <p className="text-sm font-bold text-[#153A5B]">{rendicion.trabajadores?.nombre_completo}</p>
               )}
@@ -262,6 +278,20 @@ export default function RendicionGastosDetalle() {
 
           <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 space-y-3">
             <p className="text-sm font-bold text-[#153A5B]">Datos generales</p>
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">
+                Título de la rendición {esBorrador && esDueño && <span className="text-red-600">*</span>}
+              </label>
+              <input
+                disabled={!esBorrador || !esDueño}
+                type="text"
+                maxLength={120}
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Ej: Gastos visita Winoa"
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-400"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-slate-500 block mb-1">Moneda</label>
