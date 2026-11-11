@@ -28,6 +28,16 @@ const ETIQUETA_ESTADO = {
   rendida: { texto: 'Rendida', color: 'bg-green-100 text-green-800' },
 };
 
+function formatearFecha(valor) {
+  if (!valor) return '—';
+  return new Date(valor).toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Santiago',
+  });
+}
+
 function Chip({ estado }) {
   const info = ETIQUETA_ESTADO[estado] || { texto: estado, color: 'bg-slate-100 text-slate-600' };
   return (
@@ -475,6 +485,16 @@ export default function CajaChicaVista() {
                     <div>
                       <p className="text-sm font-bold text-[#153A5B]">{s.articulo}</p>
                       <p className="text-xs text-slate-500">{s.solicitante_nombre}</p>
+                      {s.estado === 'rechazada' ? (
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Rechazada el {formatearFecha(s.fecha_resolucion)}
+                        </p>
+                      ) : (
+                        <div className="text-[11px] text-slate-400 mt-1 leading-tight">
+                          <p>Dinero entregado: {formatearFecha(s.fecha_entrega)}</p>
+                          <p>Rendido: {formatearFecha(s.fecha_rendicion)}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-[#0F5C8C]">{formatearCLP(s.monto_solicitado)}</p>
