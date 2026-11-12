@@ -11,9 +11,10 @@ import { createClient } from '@supabase/supabase-js';
 //
 // Con la doble aprobación, "le corresponde revisar" significa distinto
 // según quién pregunta:
-//   - Jefatura: solo sus solicitudes en 'pendiente' (su propio equipo). Una
-//     vez que el jefe aprueba, la solicitud sale de su lista — ya no tiene
-//     nada más que hacer ahí.
+//   - Jefatura: sus solicitudes en 'pendiente' (su propio equipo) y también
+//     las 'aprobada_jefe' (ya aprobadas por él, a la espera de RR.HH.), para
+//     que pueda seguir corrigiendo las fechas hasta la firma final. Estas
+//     últimas el front las muestra solo con el botón Editar, sin aprobar.
 //   - RR.HH./administrador: de toda la empresa, las que están en
 //     'pendiente' SIN jefe directo válido (ahí RR.HH. es la única
 //     aprobación, como antes) MÁS las que están en 'aprobada_jefe' (la
@@ -58,7 +59,7 @@ export async function GET(req) {
   }
 
   if (!esRRHH) {
-    // Jefatura: solo lo suyo, en 'pendiente'.
+    // Jefatura: solo lo suyo, en 'pendiente' o 'aprobada_jefe'.
     const { data: trabajadores } = await admin
       .from('trabajadores')
       .select('id, nombre_completo')
@@ -72,13 +73,15 @@ export async function GET(req) {
       .from('solicitudes_vacaciones')
       .select('*')
       .in('trabajador_id', idsTrabajadores)
-      .eq('estado', 'pendiente')
+      .in('estado', ['pendiente', 'aprobada_jefe'])
       .order('created_at', { ascending: false });
 
     const nombrePorTrabajador = new Map((trabajadores || []).map((t) => [t.id, t.nombre_completo]));
     const conNombre = (solicitudes || []).map((s) => ({
       ...s,
       trabajador_nombre: nombrePorTrabajador.get(s.trabajador_id) || '—',
+      // Es su equipo: puede editar las fechas mientras RR.HH. no firme.
+      puede_editar: true,
     }));
 
     return NextResponse.json({ solicitudes: conNombre });
@@ -144,6 +147,8 @@ export async function GET(req) {
       // 'rrhh': está en la etapa de RR.HH. (segunda firma o sin jefe válido).
       etapa:
         s.estado === 'pendiente' && jefePorTrabajador.get(s.trabajador_id) === callerId ? 'jefe' : 'rrhh',
+      // Si además es jefe directo de esa persona, puede editar las fechas.
+      puede_editar: jefePorTrabajador.get(s.trabajador_id) === callerId,
     }));
 
   return NextResponse.json({

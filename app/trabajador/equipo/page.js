@@ -9,6 +9,7 @@ import { trabajadorLinks } from '@/lib/navLinks';
 import Avatar from '@/components/Avatar';
 import CalendarioVacaciones from '@/components/CalendarioVacaciones';
 import ModalTraslapeVacaciones from '@/components/ModalTraslapeVacaciones';
+import ModalEditarVacacionJefe from '@/components/ModalEditarVacacionJefe';
 import { formatDiasDisponibles } from '@/lib/formatDias';
 import ModalDetalleAsistencia from '@/components/ModalDetalleAsistencia';
 import { obtenerAsistenciaMesActual, formatearMinutosAtraso } from '@/lib/asistencia';
@@ -17,6 +18,7 @@ import {
   obtenerVacacionesPendientesEquipo,
   obtenerTraslapes,
   resolverSolicitudVacaciones,
+  editarVacacionEquipo,
   mesActualISO,
 } from '@/lib/vacacionesEquipo';
 import { obtenerPermisosPendientesEquipo, resolverSolicitudPermiso } from '@/lib/permisosEquipo';
@@ -47,6 +49,9 @@ export default function MiEquipo() {
   const [errorPermisos, setErrorPermisos] = useState('');
   const [vacacionesPendientes, setVacacionesPendientes] = useState(null);
   const [errorVacacionesPendientes, setErrorVacacionesPendientes] = useState('');
+  const [editando, setEditando] = useState(null); // solicitud de vacaciones que el jefe está editando
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
+  const [errorEdicion, setErrorEdicion] = useState('');
 
   useEffect(() => {
     if (!perfil) return;
@@ -157,6 +162,22 @@ export default function MiEquipo() {
       setErrorCalendario(err.message);
     } finally {
       setResolviendo(false);
+    }
+  }
+
+  async function guardarEdicion(fechaDesde, fechaHasta, motivo) {
+    setGuardandoEdicion(true);
+    setErrorEdicion('');
+    try {
+      await editarVacacionEquipo(editando.id, fechaDesde, fechaHasta, motivo);
+      setEditando(null);
+      await cargarVacacionesPendientes();
+      const datos = await obtenerCalendarioVacaciones(mes);
+      setCalendario(datos);
+    } catch (err) {
+      setErrorEdicion(err.message);
+    } finally {
+      setGuardandoEdicion(false);
     }
   }
 
@@ -311,7 +332,9 @@ export default function MiEquipo() {
           {vacacionesPendientes?.some((s) => s.estado === 'aprobada_jefe') && (
             <>
               <p className="text-xs font-bold text-slate-400 tracking-wide mb-2">
-                VACACIONES · A LA ESPERA DE TU FIRMA (RR.HH.)
+                {esRRHH
+                  ? 'VACACIONES · A LA ESPERA DE TU FIRMA (RR.HH.)'
+                  : 'VACACIONES APROBADAS POR TI · A LA ESPERA DE RR.HH.'}
               </p>
               <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100 mb-6">
                 {vacacionesPendientes
@@ -320,8 +343,13 @@ export default function MiEquipo() {
                     <TarjetaVacacionPendiente
                       key={s.id}
                       s={s}
+                      soloEditar={!esRRHH}
                       onAprobar={() => pedirConfirmacion(s)}
                       onRechazar={() => confirmarResolucion(s, 'rechazada')}
+                      onEditar={() => {
+                        setErrorEdicion('');
+                        setEditando(s);
+                      }}
                     />
                   ))}
               </div>
@@ -342,6 +370,10 @@ export default function MiEquipo() {
                       s={s}
                       onAprobar={() => pedirConfirmacion(s)}
                       onRechazar={() => confirmarResolucion(s, 'rechazada')}
+                      onEditar={() => {
+                        setErrorEdicion('');
+                        setEditando(s);
+                      }}
                     />
                   ))}
               </div>
@@ -372,6 +404,16 @@ export default function MiEquipo() {
         />
       )}
 
+      {editando && (
+        <ModalEditarVacacionJefe
+          solicitud={editando}
+          guardando={guardandoEdicion}
+          error={errorEdicion}
+          onGuardar={guardarEdicion}
+          onCancelar={() => setEditando(null)}
+        />
+      )}
+
       {confirmando && traslapes && traslapes.length > 0 && (
         <ModalTraslapeVacaciones
           traslapes={traslapes}
@@ -387,7 +429,7 @@ export default function MiEquipo() {
   );
 }
 
-function TarjetaVacacionPendiente({ s, onAprobar, onRechazar }) {
+function TarjetaVacacionPendiente({ s, onAprobar, onRechazar, onEditar, soloEditar }) {
   return (
     <div className="px-4 py-3">
       <div className="flex items-center justify-between mb-2">
@@ -400,21 +442,40 @@ function TarjetaVacacionPendiente({ s, onAprobar, onRechazar }) {
         {fechaDMA(s.fecha_desde)} → {fechaDMA(s.fecha_hasta)}
       </p>
       {s.estado === 'aprobada_jefe' && (
-        <p className="text-[10px] text-blue-700 mb-2">Ya la aprobó su jefe directo — falta tu firma.</p>
+        <p className="text-[10px] text-blue-700 mb-2">
+          {soloEditar
+            ? 'Ya la aprobaste — falta la firma de RR.HH. Puedes corregir las fechas hasta entonces.'
+            : 'Ya la aprobó su jefe directo — falta tu firma.'}
+        </p>
+      )}
+      {s.motivo_edicion && (
+        <p className="text-[10px] text-slate-400 mb-2">Última edición: {s.motivo_edicion}</p>
       )}
       <div className="flex gap-2">
-        <button
-          onClick={onAprobar}
-          className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-2"
-        >
-          Aprobar
-        </button>
-        <button
-          onClick={onRechazar}
-          className="text-xs font-bold text-red-800 bg-red-100 rounded-lg px-3 py-2"
-        >
-          Rechazar
-        </button>
+        {!soloEditar && (
+          <>
+            <button
+              onClick={onAprobar}
+              className="text-xs font-bold text-green-800 bg-green-100 rounded-lg px-3 py-2"
+            >
+              Aprobar
+            </button>
+            <button
+              onClick={onRechazar}
+              className="text-xs font-bold text-red-800 bg-red-100 rounded-lg px-3 py-2"
+            >
+              Rechazar
+            </button>
+          </>
+        )}
+        {s.puede_editar && (
+          <button
+            onClick={onEditar}
+            className="text-xs font-bold text-[#0F5C8C] bg-blue-50 rounded-lg px-3 py-2"
+          >
+            Editar fechas
+          </button>
+        )}
       </div>
     </div>
   );
