@@ -10,6 +10,7 @@ import {
 } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
 import { generarPdfInformeCajaChica } from '@/lib/informeCajaChicaPdf';
+import { generarPdfResumenCajaChica } from '@/lib/resumenCajaChicaPdf';
 
 const ETIQUETA_TIPO = { factura: 'Factura', boleta: 'Boleta', vale_por: 'Vale por' };
 
@@ -17,6 +18,21 @@ function formatearFecha(fechaISO) {
   if (!fechaISO) return '—';
   return new Date(fechaISO).toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
+
+function fechaCorta(fechaISO) {
+  if (!fechaISO) return '—';
+  return new Date(fechaISO).toLocaleDateString('es-CL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Santiago',
+  });
+}
+
+const ESTADOS_TABLA = {
+  rendida: { texto: 'Rendida', clase: 'bg-green-100 text-green-800' },
+  rechazada: { texto: 'Rechazada', clase: 'bg-red-100 text-red-700' },
+};
 
 function folioTexto(folio) {
   return folio ? String(folio).padStart(4, '0') : 'sin folio';
@@ -64,6 +80,18 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
     setError('');
     try {
       await generarPdfInformeCajaChica(datosReporte || reporte);
+    } catch (err) {
+      setError('No se pudo generar el PDF: ' + err.message);
+    } finally {
+      setDescargandoPdf(false);
+    }
+  }
+
+  async function imprimirResumen() {
+    setDescargandoPdf(true);
+    setError('');
+    try {
+      await generarPdfResumenCajaChica(reporte);
     } catch (err) {
       setError('No se pudo generar el PDF: ' + err.message);
     } finally {
@@ -184,11 +212,19 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
             <p className="text-sm text-slate-400 py-6 text-center">Aún no hay un fondo de caja chica abierto.</p>
           ) : (
             <>
-              <div className="bg-slate-50 rounded-lg p-3">
-                <p className="text-xs text-slate-500">
-                  Saldo inicial del folio {folioTexto(periodo.folio)} — {formatearFecha(periodo.fecha_inicio)}
-                </p>
-                <p className="text-lg font-bold text-[#153A5B]">{formatearCLP(periodo.monto_inicial)}</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-[10px] font-bold text-slate-400 tracking-wide">FOLIO</p>
+                  <p className="text-base font-bold text-[#153A5B]">{folioTexto(periodo.folio)}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-[10px] font-bold text-slate-400 tracking-wide">FECHA DE APERTURA</p>
+                  <p className="text-base font-bold text-[#153A5B]">{fechaCorta(periodo.fecha_inicio)}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3">
+                  <p className="text-[10px] font-bold text-slate-400 tracking-wide">SALDO INICIAL</p>
+                  <p className="text-base font-bold text-[#153A5B]">{formatearCLP(periodo.monto_inicial)}</p>
+                </div>
               </div>
 
               {reporte.pendientesDeCierre > 0 && (
@@ -198,22 +234,62 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
                 </p>
               )}
 
-              <p className="text-xs font-bold text-slate-400 tracking-wide">SOLICITUDES DEL FOLIO</p>
-              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                {(reporte.solicitudes || []).length === 0 && (
-                  <p className="text-sm text-slate-400 p-3">Sin solicitudes en este folio.</p>
-                )}
-                {(reporte.solicitudes || []).map((s) => (
-                  <div key={s.id} className="px-3 py-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="font-bold text-[#153A5B]">{s.articulo}</span>
-                      <span className="font-bold">{formatearCLP(s.monto_rendido ?? s.monto_solicitado)}</span>
-                    </div>
-                    <p className="text-slate-500">
-                      Compró: {s.solicitante_nombre} · Aprobó: {s.aprobador_nombre || '—'} · Estado: {s.estado}
-                    </p>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-bold text-slate-400 tracking-wide">SOLICITUDES DEL FOLIO</p>
+                <button
+                  onClick={imprimirResumen}
+                  disabled={descargandoPdf}
+                  className="text-xs font-bold text-white bg-[#153A5B] hover:bg-[#0F5C8C] rounded-lg px-3 py-1.5 disabled:opacity-60"
+                >
+                  {descargandoPdf ? 'Generando…' : '🖨️ Imprimir PDF'}
+                </button>
+              </div>
+              <div className="border border-slate-200 rounded-lg overflow-x-auto">
+                <table className="w-full text-xs min-w-[560px] border-collapse">
+                  <thead>
+                    <tr className="bg-[#153A5B] text-white text-left">
+                      <th className="px-2 py-2 font-bold border-r border-white/20 w-8 text-center">N°</th>
+                      <th className="px-2 py-2 font-bold border-r border-white/20">F. solicitud</th>
+                      <th className="px-2 py-2 font-bold border-r border-white/20">F. rendición</th>
+                      <th className="px-2 py-2 font-bold border-r border-white/20">Detalle</th>
+                      <th className="px-2 py-2 font-bold border-r border-white/20">Solicitó / Autorizó</th>
+                      <th className="px-2 py-2 font-bold border-r border-white/20">Estado</th>
+                      <th className="px-2 py-2 font-bold text-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(reporte.solicitudes || []).length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-3 text-slate-400">
+                          Sin solicitudes en este folio.
+                        </td>
+                      </tr>
+                    )}
+                    {(reporte.solicitudes || []).map((s, i) => {
+                      const est = ESTADOS_TABLA[s.estado] || { texto: 'En curso', clase: 'bg-amber-100 text-amber-800' };
+                      return (
+                        <tr key={s.id} className={`border-t border-slate-200 align-top ${i % 2 ? 'bg-slate-50' : 'bg-white'}`}>
+                          <td className="px-2 py-2 text-center text-slate-500 border-r border-slate-100">{i + 1}</td>
+                          <td className="px-2 py-2 whitespace-nowrap border-r border-slate-100">{fechaCorta(s.created_at)}</td>
+                          <td className="px-2 py-2 whitespace-nowrap border-r border-slate-100">
+                            {s.estado === 'rendida' ? fechaCorta(s.fecha_rendicion) : '—'}
+                          </td>
+                          <td className="px-2 py-2 font-bold text-[#153A5B] border-r border-slate-100">{s.articulo}</td>
+                          <td className="px-2 py-2 border-r border-slate-100">
+                            <span className="block">{s.solicitante_nombre}</span>
+                            <span className="block text-slate-400">Aprobó: {s.aprobador_nombre || '—'}</span>
+                          </td>
+                          <td className="px-2 py-2 border-r border-slate-100">
+                            <span className={`inline-block rounded-full px-2 py-0.5 font-bold ${est.clase}`}>{est.texto}</span>
+                          </td>
+                          <td className="px-2 py-2 text-right font-bold whitespace-nowrap">
+                            {formatearCLP(s.monto_rendido ?? s.monto_solicitado)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {['factura', 'boleta', 'vale_por'].map((tipo) =>
