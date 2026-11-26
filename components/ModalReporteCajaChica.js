@@ -7,6 +7,7 @@ import {
   obtenerReporteCajaChica,
   obtenerHistorialCajas,
   obtenerReportePeriodo,
+  urlFirmadaComprobante,
 } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
 import { generarPdfInformeCajaChica } from '@/lib/informeCajaChicaPdf';
@@ -187,17 +188,30 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
     }
   }
 
-  const comprobantesPorTipo = { factura: [], boleta: [], vale_por: [] };
-  (reporte.solicitudes || []).forEach((s) => {
-    if (s.estado === 'rechazada') return;
-    (s.comprobantes || []).forEach((c) => {
-      comprobantesPorTipo[c.tipo]?.push({ ...c, solicitante: s.solicitante_nombre, articulo: s.articulo });
-    });
-  });
+  // Mismos datos que el PDF imprimible: una fila por documento de respaldo.
+  const solicitudesVisibles = (reporte.solicitudes || []).filter((s) => s.estado !== 'rechazada');
+  const totalRendido = solicitudesVisibles
+    .filter((s) => s.estado === 'rendida')
+    .reduce((acc, s) => acc + Number(s.monto_rendido || 0), 0);
+  const saldoCaja = Number(periodo?.monto_inicial || 0) - totalRendido;
+
+  // Abre la foto/PDF original del comprobante (URL firmada temporal). Se abre
+  // la pestaña antes de pedir la URL para que el navegador no la bloquee.
+  async function verFoto(storagePath) {
+    const ventana = window.open('', '_blank');
+    try {
+      const url = await urlFirmadaComprobante(storagePath);
+      if (ventana) ventana.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      if (ventana) ventana.close();
+      setError('No se pudo abrir la foto: ' + err.message);
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-5xl max-h-[90vh] flex flex-col">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <p className="text-sm font-bold text-[#153A5B]">
             Rendir caja chica{periodo ? ` — Folio ${folioTexto(periodo.folio)}` : ''}
@@ -235,7 +249,7 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
               )}
 
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-bold text-slate-400 tracking-wide">SOLICITUDES DEL FOLIO</p>
+                <p className="text-xs font-bold text-slate-400 tracking-wide">DETALLE DE GASTOS</p>
                 <button
                   onClick={imprimirResumen}
                   disabled={descargandoPdf}
@@ -244,79 +258,118 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
                   {descargandoPdf ? 'Generando…' : '🖨️ Imprimir PDF'}
                 </button>
               </div>
-              <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                <table className="w-full text-xs min-w-[560px] border-collapse">
+              <div className="border border-slate-300 rounded-lg overflow-x-auto">
+                <table className="w-full text-xs min-w-[860px] border-collapse">
                   <thead>
                     <tr className="bg-[#153A5B] text-white text-left">
-                      <th className="px-2 py-2 font-bold border-r border-white/20 w-8 text-center">N°</th>
-                      <th className="px-2 py-2 font-bold border-r border-white/20">F. solicitud</th>
-                      <th className="px-2 py-2 font-bold border-r border-white/20">F. rendición</th>
-                      <th className="px-2 py-2 font-bold border-r border-white/20">Detalle</th>
-                      <th className="px-2 py-2 font-bold border-r border-white/20">Solicitó / Autorizó</th>
-                      <th className="px-2 py-2 font-bold border-r border-white/20">Estado</th>
-                      <th className="px-2 py-2 font-bold text-right">Monto</th>
+                      {['N°', 'F. solicitud', 'F. rendición', 'Detalle', 'Solicitó / Autorizó', 'Documento', 'RUT proveedor', 'Proveedor', 'Monto'].map((h, idx) => (
+                        <th key={h} className={`px-2 py-2 font-bold border border-slate-400/40 ${idx === 8 ? 'text-right' : ''} ${idx < 3 || idx === 6 ? 'text-center' : ''}`}>
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {(reporte.solicitudes || []).length === 0 && (
+                    {solicitudesVisibles.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-3 text-slate-400">
-                          Sin solicitudes en este folio.
+                        <td colSpan={9} className="p-3 text-slate-400 border border-slate-300">
+                          Sin gastos en este folio.
                         </td>
                       </tr>
                     )}
-                    {(reporte.solicitudes || []).map((s, i) => {
-                      const est = ESTADOS_TABLA[s.estado] || { texto: 'En curso', clase: 'bg-amber-100 text-amber-800' };
-                      return (
-                        <tr key={s.id} className={`border-t border-slate-200 align-top ${i % 2 ? 'bg-slate-50' : 'bg-white'}`}>
-                          <td className="px-2 py-2 text-center text-slate-500 border-r border-slate-100">{i + 1}</td>
-                          <td className="px-2 py-2 whitespace-nowrap border-r border-slate-100">{fechaCorta(s.created_at)}</td>
-                          <td className="px-2 py-2 whitespace-nowrap border-r border-slate-100">
+                    {solicitudesVisibles.map((s, i) => {
+                      const docs = s.estado === 'rendida' ? s.comprobantes || [] : [];
+                      const filas = docs.length || 1;
+                      const fondo = i % 2 ? 'bg-slate-50' : 'bg-white';
+                      const celda = 'px-2 py-2 border border-slate-300 align-middle';
+                      const comunes = (
+                        <>
+                          <td rowSpan={filas} className={`${celda} ${fondo} text-center text-slate-500`}>{i + 1}</td>
+                          <td rowSpan={filas} className={`${celda} ${fondo} text-center whitespace-nowrap`}>{fechaCorta(s.created_at)}</td>
+                          <td rowSpan={filas} className={`${celda} ${fondo} text-center whitespace-nowrap`}>
                             {s.estado === 'rendida' ? fechaCorta(s.fecha_rendicion) : '—'}
                           </td>
-                          <td className="px-2 py-2 font-bold text-[#153A5B] border-r border-slate-100">{s.articulo}</td>
-                          <td className="px-2 py-2 border-r border-slate-100">
+                          <td rowSpan={filas} className={`${celda} ${fondo} font-bold text-[#153A5B]`}>{s.articulo}</td>
+                          <td rowSpan={filas} className={`${celda} ${fondo}`}>
                             <span className="block">{s.solicitante_nombre}</span>
-                            <span className="block text-slate-400">Aprobó: {s.aprobador_nombre || '—'}</span>
+                            <span className="block text-slate-400">Aut.: {s.aprobador_nombre || '—'}</span>
                           </td>
-                          <td className="px-2 py-2 border-r border-slate-100">
-                            <span className={`inline-block rounded-full px-2 py-0.5 font-bold ${est.clase}`}>{est.texto}</span>
-                          </td>
-                          <td className="px-2 py-2 text-right font-bold whitespace-nowrap">
-                            {formatearCLP(s.monto_rendido ?? s.monto_solicitado)}
-                          </td>
-                        </tr>
+                        </>
                       );
+                      if (!docs.length) {
+                        return (
+                          <tr key={s.id}>
+                            {comunes}
+                            <td className={`${celda} ${fondo} text-amber-700 font-bold`}>
+                              {s.estado === 'rendida' ? 'Sin comprobante' : 'En curso, sin rendir'}
+                            </td>
+                            <td className={`${celda} ${fondo} text-center`}>—</td>
+                            <td className={`${celda} ${fondo}`}>—</td>
+                            <td className={`${celda} ${fondo} text-right font-bold whitespace-nowrap`}>
+                              {formatearCLP(s.monto_solicitado)}
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return docs.map((c, j) => (
+                        <tr key={c.id}>
+                          {j === 0 && comunes}
+                          <td className={`${celda} ${fondo}`}>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="font-bold">
+                                {ETIQUETA_TIPO[c.tipo] || c.tipo} N° {c.numero_documento || 'S/N'}
+                              </span>
+                              {c.storage_path && (
+                                <button
+                                  onClick={() => verFoto(c.storage_path)}
+                                  title="Ver foto del comprobante"
+                                  className="text-sm leading-none rounded bg-blue-50 hover:bg-blue-100 px-1.5 py-1"
+                                >
+                                  📷
+                                </button>
+                              )}
+                            </span>
+                          </td>
+                          <td className={`${celda} ${fondo} text-center whitespace-nowrap`}>
+                            {c.tipo === 'factura' ? c.rut_proveedor || '—' : '—'}
+                          </td>
+                          <td className={`${celda} ${fondo}`}>{c.tipo === 'factura' ? c.proveedor || '—' : '—'}</td>
+                          <td className={`${celda} ${fondo} text-right font-bold whitespace-nowrap`}>{formatearCLP(c.monto)}</td>
+                        </tr>
+                      ));
                     })}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-200 font-bold">
+                      <td colSpan={8} className="px-2 py-2 border border-slate-300 text-right">TOTAL RENDIDO</td>
+                      <td className="px-2 py-2 border border-slate-300 text-right whitespace-nowrap">{formatearCLP(totalRendido)}</td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
 
-              {['factura', 'boleta', 'vale_por'].map((tipo) =>
-                comprobantesPorTipo[tipo].length > 0 ? (
-                  <div key={tipo}>
-                    <p className="text-xs font-bold text-slate-400 tracking-wide mb-1">
-                      {ETIQUETA_TIPO[tipo].toUpperCase()}S
-                    </p>
-                    <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
-                      {comprobantesPorTipo[tipo].map((c) => (
-                        <div key={c.id} className="px-3 py-2 text-xs flex justify-between">
-                          <span>
-                            {c.solicitante} — {c.articulo}
-                            {c.numero_documento ? ` (N° ${c.numero_documento})` : ''}{c.proveedor ? ` · ${c.proveedor}` : ''}{c.rut_proveedor ? ` · RUT ${c.rut_proveedor}` : ''}
-                          </span>
-                          <span className="font-bold">{formatearCLP(c.monto)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null
-              )}
-
-              <div className="bg-[#153A5B] text-white rounded-lg p-3">
-                <p className="text-xs opacity-80">Total que debería haber físicamente en la caja ahora (saldo teórico)</p>
-                <p className="text-xl font-bold">{formatearCLP(saldoTeorico)}</p>
-              </div>
+              <p className="text-xs font-bold text-slate-400 tracking-wide">CUADRATURA</p>
+              <table className="w-full sm:w-96 text-xs border-collapse border border-slate-300">
+                <tbody>
+                  {[
+                    ['Saldo inicial del folio', formatearCLP(periodo.monto_inicial), false],
+                    ['(−) Total rendido', formatearCLP(totalRendido), false],
+                    ['Saldo que debe haber en caja', formatearCLP(saldoCaja), true],
+                    ...(aprobada
+                      ? [
+                          ['Efectivo contado', formatearCLP(periodo.efectivo_contado), false],
+                          ['Diferencia', formatearCLP(Number(periodo.efectivo_contado) - saldoCaja), false],
+                          ['Monto a reintegrar', formatearCLP(periodo.monto_reintegro), true],
+                        ]
+                      : []),
+                  ].map(([etiqueta, valor, resaltar]) => (
+                    <tr key={etiqueta} className={resaltar ? 'bg-slate-200 font-bold' : ''}>
+                      <td className="px-2 py-1.5 border border-slate-300">{etiqueta}</td>
+                      <td className="px-2 py-1.5 border border-slate-300 text-right font-bold whitespace-nowrap">{valor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
               {/* PASO 1: aprobar la rendición de la caja */}
               {reporte.pendientesDeCierre === 0 && mostrarFormAprobar && (
