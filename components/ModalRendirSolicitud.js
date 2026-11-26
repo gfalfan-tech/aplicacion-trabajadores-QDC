@@ -66,7 +66,7 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
         return;
       }
       if (c.tipo === 'factura' && !String(c.proveedor).trim()) {
-        setError(`Comprobante ${i + 1}: ingresa el nombre del proveedor.`);
+        setError(`Comprobante ${i + 1}: ingresa la razón social del proveedor.`);
         return;
       }
     }
@@ -141,7 +141,7 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
               {c.tipo === 'factura' && (
                 <input
                   type="text"
-                  placeholder="Nombre del proveedor (obligatorio)"
+                  placeholder="Razón social del proveedor (obligatorio)"
                   value={c.proveedor}
                   onChange={(e) => actualizar(i, { proveedor: e.target.value })}
                   className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"

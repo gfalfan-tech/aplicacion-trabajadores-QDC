@@ -56,7 +56,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'El RUT del proveedor de la factura falta o no es válido.' }, { status: 400 });
     }
     if (c.tipo === 'factura' && !String(c.proveedor || '').trim()) {
-      return NextResponse.json({ error: 'Ingresa el nombre del proveedor de la factura.' }, { status: 400 });
+      return NextResponse.json({ error: 'Ingresa la razón social del proveedor de la factura.' }, { status: 400 });
     }
     montoRendido += monto;
   }
