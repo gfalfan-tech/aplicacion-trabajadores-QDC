@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { subirComprobanteCajaChica, enviarRendicionCajaChica } from '@/lib/cajaChica';
 import { formatearCLP } from '@/lib/cajaChicaLogica';
+import { rutValido, formatearRut } from '@/lib/rutProveedor';
 
 const TIPOS = [
   { value: 'factura', label: 'Factura' },
@@ -11,7 +12,7 @@ const TIPOS = [
 ];
 
 function comprobanteVacio() {
-  return { tipo: 'boleta', numero_documento: '', monto: '', descripcion: '', file: null, subiendo: false };
+  return { tipo: 'boleta', numero_documento: '', rut_proveedor: '', monto: '', descripcion: '', file: null, subiendo: false };
 }
 
 // Modal donde el solicitante rinde cuentas de una solicitud ya entregada:
@@ -55,13 +56,24 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
       setError('Todos los comprobantes deben tener un monto mayor a 0.');
       return;
     }
+    for (const [i, c] of comprobantes.entries()) {
+      if ((c.tipo === 'factura' || c.tipo === 'boleta') && !String(c.numero_documento).trim()) {
+        setError(`Comprobante ${i + 1}: ingresa el N° de la ${c.tipo}.`);
+        return;
+      }
+      if (c.tipo === 'factura' && !rutValido(c.rut_proveedor)) {
+        setError(`Comprobante ${i + 1}: el RUT del proveedor falta o no es válido (ej: 76.123.456-7).`);
+        return;
+      }
+    }
     setEnviando(true);
     try {
       await enviarRendicionCajaChica(
         solicitud.id,
         comprobantes.map((c) => ({
           tipo: c.tipo,
-          numero_documento: c.numero_documento || null,
+          numero_documento: String(c.numero_documento).trim() || null,
+          rut_proveedor: c.tipo === 'factura' ? formatearRut(c.rut_proveedor) : null,
           monto: Number(c.monto),
           descripcion: c.descripcion || null,
           storage_path: c.storage_path || null,
@@ -116,11 +128,21 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
               </div>
               <input
                 type="text"
-                placeholder="N° de documento (opcional)"
+                placeholder={c.tipo === 'vale_por' ? 'N° de documento (opcional)' : 'N° de documento (obligatorio)'}
                 value={c.numero_documento}
                 onChange={(e) => actualizar(i, { numero_documento: e.target.value })}
                 className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
               />
+              {c.tipo === 'factura' && (
+                <input
+                  type="text"
+                  placeholder="RUT del proveedor (obligatorio) ej: 76.123.456-7"
+                  value={c.rut_proveedor}
+                  onChange={(e) => actualizar(i, { rut_proveedor: e.target.value })}
+                  onBlur={() => c.rut_proveedor && actualizar(i, { rut_proveedor: formatearRut(c.rut_proveedor) })}
+                  className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+                />
+              )}
               <input
                 type="text"
                 placeholder="Descripción (opcional)"

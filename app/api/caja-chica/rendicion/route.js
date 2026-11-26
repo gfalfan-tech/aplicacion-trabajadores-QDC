@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { autenticar } from '@/lib/apiAuth';
+import { rutValido, formatearRut } from '@/lib/rutProveedor';
 
 // El solicitante ingresa los comprobantes (factura/boleta/vale por) con
 // los que justifica el gasto de una solicitud ya entregada. Calcula el
@@ -48,6 +49,12 @@ export async function POST(req) {
     if (!TIPOS_VALIDOS.has(c.tipo) || !monto || monto <= 0) {
       return NextResponse.json({ error: 'Uno de los comprobantes tiene datos inválidos.' }, { status: 400 });
     }
+    if ((c.tipo === 'factura' || c.tipo === 'boleta') && !String(c.numero_documento || '').trim()) {
+      return NextResponse.json({ error: `Ingresa el N° de la ${c.tipo}.` }, { status: 400 });
+    }
+    if (c.tipo === 'factura' && !rutValido(c.rut_proveedor)) {
+      return NextResponse.json({ error: 'El RUT del proveedor de la factura falta o no es válido.' }, { status: 400 });
+    }
     montoRendido += monto;
   }
 
@@ -55,7 +62,8 @@ export async function POST(req) {
     comprobantes.map((c) => ({
       solicitud_id: solicitudId,
       tipo: c.tipo,
-      numero_documento: c.numero_documento || null,
+      numero_documento: String(c.numero_documento || '').trim() || null,
+      rut_proveedor: c.tipo === 'factura' ? formatearRut(c.rut_proveedor) : null,
       monto: Number(c.monto),
       descripcion: c.descripcion || null,
       storage_path: c.storage_path || null,
