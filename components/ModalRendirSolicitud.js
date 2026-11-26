@@ -12,7 +12,7 @@ const TIPOS = [
 ];
 
 function comprobanteVacio() {
-  return { tipo: 'boleta', numero_documento: '', rut_proveedor: '', monto: '', descripcion: '', file: null, subiendo: false };
+  return { tipo: 'boleta', numero_documento: '', rut_proveedor: '', proveedor: '', monto: '', descripcion: '', file: null, subiendo: false };
 }
 
 // Modal donde el solicitante rinde cuentas de una solicitud ya entregada:
@@ -65,6 +65,10 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
         setError(`Comprobante ${i + 1}: el RUT del proveedor falta o no es válido (ej: 76.123.456-7).`);
         return;
       }
+      if (c.tipo === 'factura' && !String(c.proveedor).trim()) {
+        setError(`Comprobante ${i + 1}: ingresa el nombre del proveedor.`);
+        return;
+      }
     }
     setEnviando(true);
     try {
@@ -74,6 +78,7 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
           tipo: c.tipo,
           numero_documento: String(c.numero_documento).trim() || null,
           rut_proveedor: c.tipo === 'factura' ? formatearRut(c.rut_proveedor) : null,
+          proveedor: c.tipo === 'factura' ? String(c.proveedor).trim() : null,
           monto: Number(c.monto),
           descripcion: c.descripcion || null,
           storage_path: c.storage_path || null,
@@ -133,6 +138,15 @@ export default function ModalRendirSolicitud({ solicitud, trabajadorId, onCerrar
                 onChange={(e) => actualizar(i, { numero_documento: e.target.value })}
                 className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
               />
+              {c.tipo === 'factura' && (
+                <input
+                  type="text"
+                  placeholder="Nombre del proveedor (obligatorio)"
+                  value={c.proveedor}
+                  onChange={(e) => actualizar(i, { proveedor: e.target.value })}
+                  className="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm"
+                />
+              )}
               {c.tipo === 'factura' && (
                 <input
                   type="text"

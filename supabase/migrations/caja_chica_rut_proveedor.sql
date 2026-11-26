@@ -3,3 +3,7 @@
 -- y el PDF los muestra con "—".
 alter table caja_chica_comprobantes
   add column if not exists rut_proveedor text;
+
+-- Nombre / razón social del proveedor (solo facturas).
+alter table caja_chica_comprobantes
+  add column if not exists proveedor text;

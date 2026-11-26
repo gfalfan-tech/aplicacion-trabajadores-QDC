@@ -303,7 +303,7 @@ export default function ModalReporteCajaChica({ reporte: reporteInicial, onCerra
                         <div key={c.id} className="px-3 py-2 text-xs flex justify-between">
                           <span>
                             {c.solicitante} — {c.articulo}
-                            {c.numero_documento ? ` (N° ${c.numero_documento})` : ''}{c.rut_proveedor ? ` · RUT ${c.rut_proveedor}` : ''}
+                            {c.numero_documento ? ` (N° ${c.numero_documento})` : ''}{c.proveedor ? ` · ${c.proveedor}` : ''}{c.rut_proveedor ? ` · RUT ${c.rut_proveedor}` : ''}
                           </span>
                           <span className="font-bold">{formatearCLP(c.monto)}</span>
                         </div>
